@@ -1,0 +1,14 @@
+[
+  {
+    "domain": "lingshan.com.cn",
+    "title": "灵山胜境官方网站",
+    "source_level": "official",
+    "allowed": true
+  },
+  {
+    "domain": "wuxi.gov.cn",
+    "title": "无锡政府或文旅相关网站",
+    "source_level": "government",
+    "allowed": true
+  }
+]

@@ -1,0 +1,203 @@
+[
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ls_001",
+    "aliases": [
+      "大照壁",
+      "无锡灵山大照壁",
+      "灵山大照壁",
+      "灵山灵山大照壁"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ls_002",
+    "aliases": [
+      "五明桥",
+      "无锡五明桥",
+      "灵山五明桥"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ls_003",
+    "aliases": [
+      "佛足坛",
+      "无锡佛足坛",
+      "灵山佛足坛"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ls_004",
+    "aliases": [
+      "五智门",
+      "无锡五智门",
+      "灵山五智门"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ls_005",
+    "aliases": [
+      "无锡菩提大道",
+      "灵山菩提大道",
+      "菩提大道"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_nine_dragons",
+    "aliases": [
+      "九龙灌浴",
+      "无锡九龙灌浴",
+      "灵山九龙灌浴"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ls_007",
+    "aliases": [
+      "无锡降魔浮雕",
+      "灵山降魔浮雕",
+      "降魔浮雕"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ls_008",
+    "aliases": [
+      "无锡阿育王柱",
+      "灵山阿育王柱",
+      "阿育王柱"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ls_009",
+    "aliases": [
+      "无锡百子戏弥勒",
+      "灵山百子戏弥勒",
+      "百子戏弥勒"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_xiangfu_temple",
+    "aliases": [
+      "无锡祥符禅寺",
+      "灵山祥符禅寺",
+      "祥符禅寺"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ling_shan_buddha",
+    "aliases": [
+      "大佛",
+      "无锡灵山大佛",
+      "灵山大佛",
+      "灵山灵山大佛"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ls_012",
+    "aliases": [
+      "佛教文化博览馆",
+      "无锡佛教文化博览馆",
+      "灵山佛教文化博览馆"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_brahma_palace",
+    "aliases": [
+      "无锡灵山梵宫",
+      "梵宫",
+      "灵山梵宫",
+      "灵山灵山梵宫"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_five_mudra_mandala",
+    "aliases": [
+      "五印坛城",
+      "无锡五印坛城",
+      "灵山五印坛城"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ls_015",
+    "aliases": [
+      "无锡曼飞龙塔",
+      "曼飞龙塔",
+      "灵山曼飞龙塔"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ls_016",
+    "aliases": [
+      "无尽意斋",
+      "无锡无尽意斋",
+      "灵山无尽意斋"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_nh_001",
+    "aliases": [
+      "拈花广场",
+      "拈花湾拈花广场",
+      "无锡拈花广场"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_nh_002",
+    "aliases": [
+      "拈花湾梵天花海",
+      "无锡梵天花海",
+      "梵天花海"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_nh_003",
+    "aliases": [
+      "拈花湾香月花街",
+      "无锡香月花街",
+      "香月花街"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_nh_004",
+    "aliases": [
+      "拈花堂",
+      "拈花湾拈花堂",
+      "无锡拈花堂"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_nh_005",
+    "aliases": [
+      "五灯湖",
+      "拈花湾五灯湖",
+      "无锡五灯湖"
+    ]
+  },
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_nh_006",
+    "aliases": [
+      "拈花湾鹿鸣谷",
+      "无锡鹿鸣谷",
+      "鹿鸣谷"
+    ]
+  }
+]

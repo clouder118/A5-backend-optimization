@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+data/app.db
+data/*.db
+data/tts/*
+!data/tts/.gitkeep
+__pycache__/
+.pytest_cache/

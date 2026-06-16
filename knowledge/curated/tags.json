@@ -1,0 +1,47 @@
+[
+  {
+    "tag": "摄影",
+    "category": "visitor_intent",
+    "aliases": [
+      "拍照",
+      "取景",
+      "打卡"
+    ]
+  },
+  {
+    "tag": "佛教文化",
+    "category": "content_theme",
+    "aliases": [
+      "礼佛",
+      "祈福",
+      "文化讲解"
+    ]
+  },
+  {
+    "tag": "室内",
+    "category": "environment",
+    "aliases": [
+      "室内参观",
+      "避雨",
+      "休息"
+    ]
+  },
+  {
+    "tag": "亲子",
+    "category": "visitor_type",
+    "aliases": [
+      "孩子",
+      "小朋友",
+      "家庭"
+    ]
+  },
+  {
+    "tag": "演艺",
+    "category": "experience_type",
+    "aliases": [
+      "表演",
+      "演出",
+      "观看演出"
+    ]
+  }
+]

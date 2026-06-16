@@ -1,0 +1,104 @@
+{
+  "name": "structured-db-first-qa",
+  "description": "Ling Shan structured database first AI guide evaluation set. Expected behavior checks provenance and discipline, not exact wording.",
+  "cases": [
+    {
+      "id": "database_fact_ling_shan_height",
+      "category": "database_fact",
+      "question": "灵山大佛多高？",
+      "expected": {
+        "intent": "scenic_fact",
+        "required_source_types": ["database"],
+        "required_sections": ["结构化事实"],
+        "web_supplement_required": false
+      }
+    },
+    {
+      "id": "tag_preference_photo",
+      "category": "tag_preference",
+      "question": "灵山大佛适合拍照吗？",
+      "expected": {
+        "intent": "scenic_fact",
+        "required_source_types": ["database"],
+        "required_sections": ["结构化标签"],
+        "web_supplement_required": false
+      }
+    },
+    {
+      "id": "document_explanation_brahma",
+      "category": "document_explanation",
+      "question": "梵宫有什么特色？",
+      "expected": {
+        "intent": "scenic_explanation",
+        "required_source_types": ["database", "document"],
+        "web_supplement_required": false
+      }
+    },
+    {
+      "id": "missing_fact_realtime_web",
+      "category": "missing_fact_web",
+      "question": "梵宫门票多少钱？",
+      "expected": {
+        "intent": "high_risk_realtime",
+        "required_source_types": ["realtime_web"],
+        "web_supplement_required": true,
+        "web_supplement_status": "success"
+      }
+    },
+    {
+      "id": "approved_web_opening_time",
+      "category": "approved_web",
+      "question": "九龙灌浴开放时间是？",
+      "setup": {
+        "approved_web_fact": {
+          "entity_id": "spot_nine_dragons",
+          "fact_key": "opening_time",
+          "fact_label": "开放时间",
+          "fact_value": "开放时间以景区官方公告为准",
+          "source_url": "https://www.lingshan.com/notice",
+          "source_level": "official"
+        }
+      },
+      "expected": {
+        "intent": "high_risk_realtime",
+        "required_source_types": ["approved_web"],
+        "web_supplement_required": false
+      }
+    },
+    {
+      "id": "web_conflict_opening_time",
+      "category": "web_conflict",
+      "question": "梵宫开放时间来源有冲突吗？",
+      "expected": {
+        "intent": "high_risk_realtime",
+        "required_source_types": ["realtime_web"],
+        "web_supplement_required": true,
+        "web_supplement_status": "success",
+        "conflict_disclosure": true
+      }
+    },
+    {
+      "id": "casual_greeting",
+      "category": "casual",
+      "question": "你好呀，你是谁？",
+      "expected": {
+        "intent": "casual",
+        "required_source_types": [],
+        "forbidden_source_types": ["database", "approved_web", "realtime_web"],
+        "web_supplement_required": false,
+        "max_source_count": 0
+      }
+    },
+    {
+      "id": "mixed_emotional_fact_height",
+      "category": "mixed_emotional_fact",
+      "question": "灵山大佛真的有88米吗？我第一次来有点紧张。",
+      "expected": {
+        "intent": "mixed_emotional_fact",
+        "required_source_types": ["database"],
+        "required_sections": ["结构化事实"],
+        "web_supplement_required": false
+      }
+    }
+  ]
+}
