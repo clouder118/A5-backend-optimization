@@ -1,0 +1,13 @@
+[
+  {
+    "entity_type": "spot",
+    "entity_id": "spot_ling_shan_buddha",
+    "fact_key": "height_meters",
+    "fact_label": "高度",
+    "fact_value": "88",
+    "fact_unit": "米",
+    "source_url": "https://www.lingshan.com.cn/web/park/introduction/1.html",
+    "source_level": "official",
+    "confidence": 0.9
+  }
+]

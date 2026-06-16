@@ -1,0 +1,235 @@
+{
+  "source_file": "Scenic Area Public Information Package\\景点景区旅游数据行为分析数据.xlsx",
+  "generated_at": "2026-06-04T10:21:13+00:00",
+  "record_count": 140447,
+  "field_count": 17,
+  "usage_note": "Excel 行为数据不进入 RAG 问答知识库；本摘要用于后台运营看板、游客画像说明和路线推荐依据展示。",
+  "overall": {
+    "avg_stay_duration": 4.23,
+    "avg_total_cost": 692.89,
+    "avg_ticket_cost": 100.75,
+    "avg_food_cost": 196.08,
+    "avg_shopping_cost": 210.23,
+    "avg_transport_cost": 72.51,
+    "avg_entertainment_cost": 113.32,
+    "avg_group_size": 2.62,
+    "avg_satisfaction": 3.72
+  },
+  "gender_distribution": [
+    {
+      "label": "男",
+      "count": 70329
+    },
+    {
+      "label": "女",
+      "count": 70118
+    }
+  ],
+  "age_distribution": [
+    {
+      "label": "18-25岁",
+      "count": 21749
+    },
+    {
+      "label": "26-35岁",
+      "count": 49307
+    },
+    {
+      "label": "36-45岁",
+      "count": 34484
+    },
+    {
+      "label": "46-60岁",
+      "count": 24030
+    },
+    {
+      "label": "60岁以上",
+      "count": 10877
+    }
+  ],
+  "attraction_type_distribution": [
+    {
+      "label": "古镇水乡",
+      "count": 31564
+    },
+    {
+      "label": "风景名胜与休闲度假",
+      "count": 25682
+    },
+    {
+      "label": "主题乐园",
+      "count": 17524
+    },
+    {
+      "label": "动植物园与水族馆",
+      "count": 16302
+    },
+    {
+      "label": "现代地标",
+      "count": 16257
+    },
+    {
+      "label": "博物馆与展馆",
+      "count": 12297
+    },
+    {
+      "label": "自然公园",
+      "count": 11717
+    },
+    {
+      "label": "历史文化",
+      "count": 9104
+    }
+  ],
+  "top_attractions": [
+    {
+      "label": "同里古镇",
+      "count": 5476
+    },
+    {
+      "label": "宁波方特东方神画",
+      "count": 5396
+    },
+    {
+      "label": "杭州宋城",
+      "count": 5387
+    },
+    {
+      "label": "金茂大厦",
+      "count": 5345
+    },
+    {
+      "label": "周庄",
+      "count": 5333
+    },
+    {
+      "label": "东方明珠",
+      "count": 5316
+    },
+    {
+      "label": "豫园",
+      "count": 5304
+    },
+    {
+      "label": "上海科技馆",
+      "count": 5292
+    }
+  ],
+  "satisfaction_distribution": [
+    {
+      "label": "2",
+      "count": 6565
+    },
+    {
+      "label": "3",
+      "count": 56819
+    },
+    {
+      "label": "4",
+      "count": 45908
+    },
+    {
+      "label": "5",
+      "count": 31155
+    }
+  ],
+  "peak_months": [
+    {
+      "label": "2025-09",
+      "count": 17616
+    },
+    {
+      "label": "2025-08",
+      "count": 17188
+    },
+    {
+      "label": "2025-07",
+      "count": 15493
+    },
+    {
+      "label": "2025-12",
+      "count": 14884
+    },
+    {
+      "label": "2025-05",
+      "count": 13936
+    },
+    {
+      "label": "2025-04",
+      "count": 12434
+    },
+    {
+      "label": "2025-06",
+      "count": 11562
+    },
+    {
+      "label": "2025-10",
+      "count": 11189
+    }
+  ],
+  "type_behavior": [
+    {
+      "label": "古镇水乡",
+      "count": 31564,
+      "avg_stay_duration": 3.99,
+      "avg_total_cost": 598.26,
+      "avg_satisfaction": 3.48
+    },
+    {
+      "label": "风景名胜与休闲度假",
+      "count": 25682,
+      "avg_stay_duration": 4.0,
+      "avg_total_cost": 651.49,
+      "avg_satisfaction": 3.58
+    },
+    {
+      "label": "主题乐园",
+      "count": 17524,
+      "avg_stay_duration": 8.98,
+      "avg_total_cost": 1576.02,
+      "avg_satisfaction": 3.26
+    },
+    {
+      "label": "动植物园与水族馆",
+      "count": 16302,
+      "avg_stay_duration": 4.5,
+      "avg_total_cost": 1068.21,
+      "avg_satisfaction": 3.39
+    },
+    {
+      "label": "现代地标",
+      "count": 16257,
+      "avg_stay_duration": 2.75,
+      "avg_total_cost": 512.97,
+      "avg_satisfaction": 3.59
+    },
+    {
+      "label": "博物馆与展馆",
+      "count": 12297,
+      "avg_stay_duration": 2.75,
+      "avg_total_cost": 164.05,
+      "avg_satisfaction": 4.76
+    },
+    {
+      "label": "自然公园",
+      "count": 11717,
+      "avg_stay_duration": 3.24,
+      "avg_total_cost": 234.93,
+      "avg_satisfaction": 4.6
+    },
+    {
+      "label": "历史文化",
+      "count": 9104,
+      "avg_stay_duration": 2.0,
+      "avg_total_cost": 390.74,
+      "avg_satisfaction": 4.2
+    }
+  ],
+  "insights": [
+    "资料包共纳入 140447 条游客行为记录，可作为游客画像和运营看板的基线数据。",
+    "样本中占比最高的景区类型是“古镇水乡”，共有 31564 条记录。",
+    "平均停留时长约 4.23 小时，平均综合消费约 692.89 元。",
+    "“主题乐园”平均停留更久，适合支撑深度游或半日游推荐理由。",
+    "“博物馆与展馆”平均满意度较高，可作为热门体验类型参考。"
+  ]
+}
