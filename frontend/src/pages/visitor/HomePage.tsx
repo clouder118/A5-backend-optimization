@@ -169,7 +169,7 @@ export default function HomePage() {
       <div className="luxury-scroll-wrapper" ref={wrapperRef}>
         <div className="luxury-scroll-content" ref={contentRef}>
           {heroScenes.map((scene, index) => (
-            <section className={`luxury-hero-panel tone-${scene.tone}`} key={scene.key}>
+            <section className={`luxury-hero-panel tone-${scene.tone}`} key={scene.key} data-cue="[ SCENE ]">
               <div className="luxury-scene-backdrop">
                 <img className="luxury-scenic-art" src={scene.image} alt="" aria-hidden="true" />
               </div>
@@ -206,14 +206,18 @@ export default function HomePage() {
           <AvatarGuide status="idle" variant="stage" emotionCue="idle" stageMode="home" title="待命中" detail="" />
         </div>
 
+        <div className="video-scroll-hint">[SCROLL DOWN]</div>
+
         <div className="luxury-quick-links">
           <Link to="/guide">
-            <Button type="primary" icon={<MessageOutlined />}>
-              立即咨询
+            <Button type="primary" icon={<MessageOutlined />} data-cue="[ GUIDE ]">
+              [ GUIDE ]
             </Button>
           </Link>
           <Link to="/spots">
-            <Button icon={<EnvironmentOutlined />}>查看景点</Button>
+            <Button icon={<EnvironmentOutlined />} data-cue="[ SPOTS ]">
+              [ SPOTS ]
+            </Button>
           </Link>
         </div>
       </div>

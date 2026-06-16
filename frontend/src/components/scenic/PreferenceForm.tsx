@@ -38,6 +38,7 @@ export default function PreferenceForm({
     <Card className="preference-card">
       <Space direction="vertical" size={18} style={{ width: '100%' }}>
         <div>
+          <Typography.Text className="mono-label">[ PREFERENCE ]</Typography.Text>
           <Typography.Title level={3} style={{ marginTop: 0 }}>
             选择你的游览偏好
           </Typography.Title>
@@ -76,8 +77,8 @@ export default function PreferenceForm({
           <Form.Item<RoutePreferenceInput> name="interestTags" label="兴趣标签">
             <Checkbox.Group options={interestOptions} />
           </Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            生成推荐路线
+          <Button type="primary" htmlType="submit" loading={loading} data-cue="[ GENERATE ]">
+            [ GENERATE ROUTE ]
           </Button>
         </Form>
       </Space>

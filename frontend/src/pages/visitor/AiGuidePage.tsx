@@ -231,8 +231,9 @@ export default function AiGuidePage() {
   };
 
   return (
-    <div className="page-stack">
-      <Space direction="vertical" size={6}>
+    <div className="page-stack ai-guide-page">
+      <Space className="video-page-heading" direction="vertical" size={6}>
+        <Typography.Text className="mono-label">[ AI GUIDE ]</Typography.Text>
         <Typography.Title level={1} style={{ margin: 0 }}>
           {productCopy.guideName}
         </Typography.Title>
@@ -269,9 +270,11 @@ export default function AiGuidePage() {
                   {group.questions.map((question) => (
                     <Tag
                       color="green"
+                      className="question-chip"
                       key={question}
                       onClick={() => sendPresetQuestion(question)}
                       style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
+                      data-cue="[ ASK ]"
                     >
                       {question}
                     </Tag>

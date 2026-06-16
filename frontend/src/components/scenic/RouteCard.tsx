@@ -56,6 +56,7 @@ export default function RouteCard({
   return (
     <Card
       className="route-card"
+      data-cue="[ ROUTE ]"
       title={route.name}
       extra={
         <Tag color="green" icon={<EnvironmentOutlined />}>
@@ -83,7 +84,7 @@ export default function RouteCard({
         <div className="route-timeline">
           {route.spots.map((spot, index) => (
             <div className="route-timeline-item" key={`${route.id}-${spot.spotId}`}>
-              <div className="route-step-index">{index + 1}</div>
+              <div className="route-step-index">{String(index + 1).padStart(2, '0')}</div>
               <div>
                 <Typography.Text strong>
                   {spot.name} · {spot.stayMinutes} 分钟

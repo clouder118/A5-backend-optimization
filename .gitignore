@@ -1,5 +1,6 @@
 .DS_Store
 .tools/
+cpython-*-install_only.tar.gz
 
 backend/.env
 backend/.env.*
@@ -16,6 +17,7 @@ backend/__pycache__/
 backend/.pytest_cache/
 
 frontend/.env.local
+frontend/.vite-cache/
 frontend/node_modules/
 frontend/*.log
 frontend/*.err.log

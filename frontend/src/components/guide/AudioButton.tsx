@@ -154,8 +154,9 @@ export default function AudioButton({
       loading={loading}
       disabled={disabled || (!text.trim() && !audioUrl)}
       onClick={speak}
+      data-cue={isPlaying ? '[ STOP ]' : '[ PLAY ]'}
     >
-      {isPlaying ? '停止讲解' : label}
+      {isPlaying ? '[ STOP ]' : label === '播放讲解' ? '[ PLAY ]' : label}
     </Button>
   );
 }

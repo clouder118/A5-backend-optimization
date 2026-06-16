@@ -31,7 +31,7 @@ export default function AdminLayout() {
     <Layout className="admin-layout">
       <Layout.Sider className="admin-sider" width={232} breakpoint="lg" collapsedWidth={0}>
         <Link to="/admin/dashboard" className="admin-brand">
-          <span className="brand-icon">
+          <span className="brand-symbol admin-brand-symbol">
             <FileSearchOutlined />
           </span>
           <span>{productCopy.adminBrandName}</span>
@@ -42,9 +42,9 @@ export default function AdminLayout() {
         <Layout.Header className="admin-header">
           <Space direction="vertical" size={0}>
             <Typography.Text strong>{productCopy.adminTitle}</Typography.Text>
-            <Typography.Text type="secondary">管理后台 · 景区资料库与问答运营</Typography.Text>
+            <Typography.Text type="secondary">[ OPERATIONS ] 景区资料库与问答运营</Typography.Text>
           </Space>
-          <Link to="/">返回游客端</Link>
+          <Link to="/">[ VISITOR ]</Link>
         </Layout.Header>
         <Layout.Content className="admin-content">
           <Outlet />

@@ -59,7 +59,7 @@ export default function ChatBox({
   };
 
   return (
-    <Card className="chat-panel" title="AI 导游问答">
+    <Card className="chat-panel" title="[ GUIDE CHAT ]">
       {error ? (
         <Alert type="warning" showIcon message="问答服务异常" description={error} style={{ marginBottom: 12 }} />
       ) : null}
@@ -75,7 +75,7 @@ export default function ChatBox({
       <div className="message-list">
         {messages.length === 0 && !loading ? <Empty description={emptyText} /> : null}
         {messages.map((item) => (
-          <div key={item.id} className={`chat-bubble ${item.role}`}>
+          <div key={item.id} className={`chat-bubble ${item.role}`} data-role={item.role}>
             <Typography.Paragraph style={{ marginBottom: item.sources?.length ? 8 : 0 }}>
               {item.content}
             </Typography.Paragraph>
@@ -149,8 +149,8 @@ export default function ChatBox({
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={handleInputKeyDown}
         />
-        <Button type="primary" size="large" icon={<SendOutlined />} loading={loading} onClick={submit}>
-          {submitLabel}
+        <Button type="primary" size="large" icon={<SendOutlined />} loading={loading} onClick={submit} data-cue="[ SEND ]">
+          {submitLabel === '发送' ? '[ SEND ]' : submitLabel}
         </Button>
       </div>
     </Card>
