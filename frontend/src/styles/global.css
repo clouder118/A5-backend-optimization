@@ -2543,7 +2543,7 @@ body::selection {
 }
 
 .video-scroll-hint {
-  position: absolute;
+  position: fixed;
   left: 50%;
   bottom: 48px;
   z-index: 11;
@@ -2551,8 +2551,23 @@ body::selection {
   font-family: var(--video-mono);
   font-size: 13px;
   line-height: 1;
+  pointer-events: none;
   transform: translateX(-50%);
   animation: videoScrollHint 1.7s ease-in-out infinite;
+  transition: opacity 0.18s ease;
+  will-change: transform, left, top;
+}
+
+.luxury-home.has-pointer-hint .video-scroll-hint {
+  top: var(--scroll-hint-y, 50%);
+  left: var(--scroll-hint-x, 50%);
+  bottom: auto;
+  padding: 6px 8px;
+  color: rgba(242, 240, 233, 0.92);
+  background: rgba(8, 9, 8, 0.54);
+  border: 1px solid rgba(242, 240, 233, 0.2);
+  transform: translate(18px, 18px);
+  animation: none;
 }
 
 @keyframes videoScrollHint {
@@ -2564,6 +2579,21 @@ body::selection {
   50% {
     opacity: 1;
     transform: translate(-50%, -4px);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .luxury-home.has-pointer-hint .video-scroll-hint,
+  .video-scroll-hint {
+    top: auto;
+    right: auto;
+    bottom: 48px;
+    left: 50%;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    transform: translateX(-50%);
+    animation: videoScrollHint 1.7s ease-in-out infinite;
   }
 }
 

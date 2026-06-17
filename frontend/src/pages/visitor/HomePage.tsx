@@ -164,6 +164,33 @@ export default function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    const home = wrapperRef.current?.closest<HTMLElement>('.luxury-home');
+    if (!home) {
+      return undefined;
+    }
+
+    let animationFrame = 0;
+    const updateHintPosition = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') {
+        return;
+      }
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(() => {
+        home.style.setProperty('--scroll-hint-x', `${event.clientX}px`);
+        home.style.setProperty('--scroll-hint-y', `${event.clientY}px`);
+        home.classList.add('has-pointer-hint');
+      });
+    };
+
+    window.addEventListener('pointermove', updateHintPosition, { passive: true });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener('pointermove', updateHintPosition);
+    };
+  }, []);
+
   return (
     <div className="luxury-home">
       <div className="luxury-scroll-wrapper" ref={wrapperRef}>
