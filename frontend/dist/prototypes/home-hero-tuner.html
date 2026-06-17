@@ -30,10 +30,19 @@
         --image-scale: 1.08;
         --image-x: 50%;
         --image-y: 50%;
+        --image-pan-x: 0%;
+        --image-pan-y: 0%;
         --brightness: 72%;
         --contrast: 112%;
         --saturation: 86%;
         --overlay-opacity: 0.6;
+        --frame-opacity: 0.16;
+        --marquee-opacity: 0.15;
+        --avatar-x: 72%;
+        --avatar-y: 62%;
+        --avatar-scale: 1;
+        --avatar-opacity: 1;
+        --quick-links-display: flex;
       }
 
       * {
@@ -105,7 +114,7 @@
         inset: 18px;
         z-index: 6;
         pointer-events: none;
-        border: 1px solid var(--line);
+        border: 1px solid rgba(242, 240, 233, var(--frame-opacity));
         content: "";
       }
 
@@ -117,13 +126,135 @@
       }
 
       .hero-image {
+        position: absolute;
+        inset: 0;
         width: 100%;
         height: 100%;
         object-fit: cover;
         object-position: var(--image-x) var(--image-y);
         filter: brightness(var(--brightness)) contrast(var(--contrast)) saturate(var(--saturation));
-        transform: scale(var(--image-scale));
+        transform: translate(var(--image-pan-x), var(--image-pan-y)) scale(var(--image-scale));
         transform-origin: center;
+      }
+
+      .prototype-header {
+        position: absolute;
+        top: 24px;
+        right: 4.8vw;
+        left: 4.8vw;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        height: 64px;
+        padding: 0 18px;
+        color: var(--text);
+        background: rgba(8, 9, 8, 0.72);
+        border: 1px solid var(--line);
+      }
+
+      .prototype-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 240px;
+        font-family: var(--title-font);
+        font-size: 19px;
+        white-space: nowrap;
+      }
+
+      .prototype-brand-symbol {
+        position: relative;
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border: 1px solid var(--line-strong);
+        border-radius: 50%;
+      }
+
+      .prototype-nav {
+        display: flex;
+        flex: 1;
+        justify-content: flex-end;
+        gap: 30px;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 12px;
+      }
+
+      .prototype-quick-links {
+        position: absolute;
+        top: 112px;
+        right: 4.8vw;
+        z-index: 20;
+        display: var(--quick-links-display);
+        gap: 10px;
+      }
+
+      .prototype-quick-links span,
+      .prototype-admin {
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 15px;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 700;
+        background: transparent;
+        border: 1px solid var(--line-strong);
+      }
+
+      .prototype-admin {
+        margin-left: auto;
+      }
+
+      .prototype-marquee {
+        position: absolute;
+        right: -4vw;
+        bottom: 9vh;
+        left: -4vw;
+        z-index: 3;
+        overflow: hidden;
+        opacity: var(--marquee-opacity);
+        transform: rotate(-4deg);
+      }
+
+      .prototype-marquee-track {
+        display: flex;
+        width: max-content;
+      }
+
+      .prototype-marquee-track span {
+        flex: none;
+        padding-right: 4vw;
+        color: rgba(242, 240, 233, 0.03);
+        font-family: var(--title-font);
+        font-size: clamp(84px, 14vw, 196px);
+        font-weight: 900;
+        line-height: 0.82;
+        text-shadow: 0 16px 38px rgba(0, 0, 0, 0.26);
+        -webkit-text-stroke: 1.45px rgba(242, 240, 233, 0.5);
+        white-space: nowrap;
+      }
+
+      .prototype-avatar {
+        position: absolute;
+        top: var(--avatar-y);
+        left: var(--avatar-x);
+        z-index: 10;
+        width: min(28vw, 340px);
+        opacity: var(--avatar-opacity);
+        transform: translate(-50%, -50%) scale(var(--avatar-scale));
+        transform-origin: center bottom;
+      }
+
+      .prototype-avatar img {
+        display: block;
+        width: 100%;
+        height: auto;
+        filter: grayscale(0.06) saturate(0.9) contrast(1.04);
       }
 
       .poster-title-group {
@@ -204,6 +335,17 @@
         width: 82px;
         height: 1px;
         background: var(--line-strong);
+      }
+
+      .scroll-hint {
+        position: absolute;
+        left: 50%;
+        bottom: 48px;
+        z-index: 8;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 13px;
+        transform: translateX(-50%);
       }
 
       .controls {
@@ -418,6 +560,30 @@
               alt=""
             />
           </div>
+          <div class="prototype-header" aria-hidden="true">
+            <div class="prototype-brand">
+              <span class="prototype-brand-symbol">L</span>
+              <span id="brandPreview">灵山胜境景点导览</span>
+            </div>
+            <div class="prototype-nav">
+              <span>[ HOME ]</span>
+              <span>[ SPOTS ]</span>
+              <span>[ ROUTES ]</span>
+              <span>[ GUIDE ]</span>
+            </div>
+            <span class="prototype-admin">[ OPS ]</span>
+          </div>
+          <div class="prototype-quick-links" id="quickLinksPreview" aria-hidden="true">
+            <span>[ GUIDE ]</span>
+            <span>[ SPOTS ]</span>
+          </div>
+          <div class="prototype-marquee" aria-hidden="true">
+            <div class="prototype-marquee-track">
+              <span id="marqueePreviewA">灵山胜境导览</span>
+              <span id="marqueePreviewB">灵山胜境导览</span>
+              <span id="marqueePreviewC">灵山胜境导览</span>
+            </div>
+          </div>
           <div class="poster-eyebrow" id="eyebrowPreview">Ling Shan Grand Buddha</div>
           <div class="poster-title-group" id="titlePreview"></div>
           <div class="poster-title-en" id="englishPreview">THE
@@ -426,7 +592,11 @@ NEWS</div>
           <div class="poster-subtitle" id="subtitlePreview">
             以数字人导游陪你看见山水、佛韵与游线之间的秩序。
           </div>
-          <div class="stage-meta"><span>01</span><i></i><span>TUNER</span></div>
+          <div class="prototype-avatar" id="avatarPreview" aria-hidden="true">
+            <img src="/avatar/guide-avatar.png" alt="" />
+          </div>
+          <div class="stage-meta"><span id="metaIndexPreview">01</span><i></i><span id="metaKeyPreview">TUNER</span></div>
+          <div class="scroll-hint">[SCROLL DOWN]</div>
         </div>
       </section>
 
@@ -437,6 +607,7 @@ NEWS</div>
         <section class="section">
           <div class="section-title">Presets</div>
           <div class="preset-row">
+            <button type="button" data-preset="lingShanJson">Ling Shan JSON</button>
             <button type="button" data-preset="kanagawa">Kanagawa</button>
             <button type="button" data-preset="afterWork">After Work</button>
             <button type="button" data-preset="sunVertical">Sun Vertical</button>
@@ -527,7 +698,7 @@ NEWS</textarea>
           <div class="grid-2">
             <label>
               <span class="inline-label">图片缩放 <span class="value" data-value-for="imageScale"></span></span>
-              <input id="imageScale" type="range" min="1" max="1.8" step="0.01" value="1.08" />
+              <input id="imageScale" type="range" min="0.5" max="2.5" step="0.01" value="1.08" />
             </label>
             <label>
               <span class="inline-label">图片 X 焦点 <span class="value" data-value-for="imageX"></span></span>
@@ -540,6 +711,10 @@ NEWS</textarea>
             <label>
               <span class="inline-label">暗角遮罩 <span class="value" data-value-for="overlayOpacity"></span></span>
               <input id="overlayOpacity" type="range" min="0" max="0.9" step="0.01" value="0.6" />
+            </label>
+            <label>
+              <span class="inline-label">边框透明度 <span class="value" data-value-for="frameOpacity"></span></span>
+              <input id="frameOpacity" type="range" min="0" max="0.6" step="0.01" value="0.16" />
             </label>
           </div>
         </section>
@@ -561,7 +736,62 @@ NEWS</textarea>
         </section>
 
         <section class="section">
+          <div class="section-title">Home Chrome</div>
+          <label>
+            品牌文字
+            <input id="brandText" type="text" value="灵山胜境景点导览" />
+          </label>
+          <label>
+            滚动字幕
+            <input id="marqueeText" type="text" value="灵山胜境导览" />
+          </label>
+          <div class="grid-2">
+            <label>
+              <span class="inline-label">字幕透明度 <span class="value" data-value-for="marqueeOpacity"></span></span>
+              <input id="marqueeOpacity" type="range" min="0" max="0.5" step="0.01" value="0.15" />
+            </label>
+            <label>
+              <span class="inline-label">数字人大小 <span class="value" data-value-for="avatarScale"></span></span>
+              <input id="avatarScale" type="range" min="0.45" max="1.8" step="0.01" value="1" />
+            </label>
+            <label>
+              <span class="inline-label">数字人 X <span class="value" data-value-for="avatarX"></span></span>
+              <input id="avatarX" type="range" min="0" max="100" step="1" value="72" />
+            </label>
+            <label>
+              <span class="inline-label">数字人 Y <span class="value" data-value-for="avatarY"></span></span>
+              <input id="avatarY" type="range" min="0" max="100" step="1" value="62" />
+            </label>
+            <label>
+              <span class="inline-label">数字人透明度 <span class="value" data-value-for="avatarOpacity"></span></span>
+              <input id="avatarOpacity" type="range" min="0" max="1" step="0.01" value="1" />
+            </label>
+            <label>
+              <span class="inline-label">显示入口按钮 <span class="value" data-value-for="showQuickLinks"></span></span>
+              <input id="showQuickLinks" type="range" min="0" max="1" step="1" value="1" />
+            </label>
+          </div>
+          <div class="grid-2">
+            <label>
+              Meta 序号
+              <input id="metaIndex" type="text" value="01" />
+            </label>
+            <label>
+              Meta Key
+              <input id="metaKey" type="text" value="TUNER" />
+            </label>
+          </div>
+        </section>
+
+        <section class="section">
           <div class="section-title">Export</div>
+          <label>
+            Import JSON
+            <textarea id="jsonInput" class="json-output" spellcheck="false"></textarea>
+          </label>
+          <div class="button-row">
+            <button id="applyJson" type="button">Apply JSON</button>
+          </div>
           <textarea id="jsonOutput" class="json-output" readonly spellcheck="false"></textarea>
           <div class="button-row">
             <button id="copyJson" class="primary" type="button">Copy JSON</button>
@@ -576,6 +806,7 @@ NEWS</textarea>
       const root = document.documentElement;
       const heroImage = $("heroImage");
       const jsonOutput = $("jsonOutput");
+      const jsonInput = $("jsonInput");
       const copyState = $("copyState");
 
       const controls = [
@@ -600,6 +831,17 @@ NEWS</textarea>
         "contrast",
         "saturation",
         "overlayOpacity",
+        "frameOpacity",
+        "brandText",
+        "marqueeText",
+        "marqueeOpacity",
+        "avatarX",
+        "avatarY",
+        "avatarScale",
+        "avatarOpacity",
+        "showQuickLinks",
+        "metaIndex",
+        "metaKey",
       ];
 
       const percentFields = new Set([
@@ -613,6 +855,8 @@ NEWS</textarea>
         "brightness",
         "contrast",
         "saturation",
+        "avatarX",
+        "avatarY",
       ]);
 
       const numberFields = new Set([
@@ -631,9 +875,50 @@ NEWS</textarea>
         "contrast",
         "saturation",
         "overlayOpacity",
+        "frameOpacity",
+        "marqueeOpacity",
+        "avatarX",
+        "avatarY",
+        "avatarScale",
+        "avatarOpacity",
+        "showQuickLinks",
       ]);
 
       const presets = {
+        lingShanJson: {
+          titleLines: "  灵山\n胜     景",
+          englishText: "Sacred Mountain\n Scenic Spot",
+          eyebrow: "",
+          subtitle: "以数字人导游陪你看见山水、佛韵与游线之间的秩序。",
+          fontSize: 110,
+          englishFontSize: 21,
+          lineHeight: 0.9,
+          titleX: 43,
+          titleY: 47,
+          titleWidth: 58,
+          titleColor: "#c7f0d3",
+          englishX: 36,
+          englishY: 50,
+          imagePath: "/scenic/spots/photos/NH-001_拈花广场/1.jpg",
+          imageScale: 1,
+          imageX: 28,
+          imageY: 40,
+          brightness: 130,
+          contrast: 116,
+          saturation: 101,
+          overlayOpacity: 0,
+          frameOpacity: 0.16,
+          brandText: "灵山胜境景点导览",
+          marqueeText: "灵山胜境导览",
+          marqueeOpacity: 0.15,
+          avatarX: 72,
+          avatarY: 62,
+          avatarScale: 1,
+          avatarOpacity: 1,
+          showQuickLinks: 1,
+          metaIndex: "01",
+          metaKey: "BUDDHA",
+        },
         kanagawa: {
           titleLines: "神奈川\n新     闻",
           englishText: "THE\nKANAGAWA\nNEWS",
@@ -656,6 +941,17 @@ NEWS</textarea>
           contrast: 116,
           saturation: 104,
           overlayOpacity: 0.58,
+          frameOpacity: 0.16,
+          brandText: "灵山胜境景点导览",
+          marqueeText: "灵山胜境导览",
+          marqueeOpacity: 0.15,
+          avatarX: 72,
+          avatarY: 62,
+          avatarScale: 1,
+          avatarOpacity: 1,
+          showQuickLinks: 1,
+          metaIndex: "01",
+          metaKey: "TUNER",
         },
         afterWork: {
           titleLines: "城中      山野\n10.16      10.22",
@@ -679,6 +975,17 @@ NEWS</textarea>
           contrast: 122,
           saturation: 74,
           overlayOpacity: 0.5,
+          frameOpacity: 0.16,
+          brandText: "灵山胜境景点导览",
+          marqueeText: "灵山胜境导览",
+          marqueeOpacity: 0.12,
+          avatarX: 73,
+          avatarY: 64,
+          avatarScale: 0.92,
+          avatarOpacity: 0.92,
+          showQuickLinks: 1,
+          metaIndex: "02",
+          metaKey: "PALACE",
         },
         sunVertical: {
           titleLines: "阳光下\n的\n小确幸",
@@ -702,6 +1009,17 @@ NEWS</textarea>
           contrast: 118,
           saturation: 118,
           overlayOpacity: 0.42,
+          frameOpacity: 0.16,
+          brandText: "灵山胜境景点导览",
+          marqueeText: "灵山胜境导览",
+          marqueeOpacity: 0.14,
+          avatarX: 72,
+          avatarY: 64,
+          avatarScale: 0.98,
+          avatarOpacity: 0.95,
+          showQuickLinks: 1,
+          metaIndex: "03",
+          metaKey: "WATER",
         },
       };
 
@@ -748,6 +1066,17 @@ NEWS</textarea>
           englishX: state.englishX,
           englishY: state.englishY,
           imagePath: state.imagePath,
+          frameOpacity: state.frameOpacity,
+          brandText: state.brandText,
+          marqueeText: state.marqueeText,
+          marqueeOpacity: state.marqueeOpacity,
+          avatarX: state.avatarX,
+          avatarY: state.avatarY,
+          avatarScale: state.avatarScale,
+          avatarOpacity: state.avatarOpacity,
+          showQuickLinks: Boolean(state.showQuickLinks),
+          metaIndex: state.metaIndex,
+          metaKey: state.metaKey,
         };
       }
 
@@ -757,6 +1086,15 @@ NEWS</textarea>
           const value = state[key];
           if (key === "imageScale" || key === "lineHeight" || key === "overlayOpacity") {
             node.textContent = value;
+          } else if (
+            key === "frameOpacity" ||
+            key === "marqueeOpacity" ||
+            key === "avatarScale" ||
+            key === "avatarOpacity"
+          ) {
+            node.textContent = value;
+          } else if (key === "showQuickLinks") {
+            node.textContent = value ? "显示" : "隐藏";
           } else if (percentFields.has(key)) {
             node.textContent = `${value}%`;
           } else if (key === "fontSize" || key === "englishFontSize") {
@@ -782,10 +1120,19 @@ NEWS</textarea>
         root.style.setProperty("--image-scale", state.imageScale);
         root.style.setProperty("--image-x", `${state.imageX}%`);
         root.style.setProperty("--image-y", `${state.imageY}%`);
+        root.style.setProperty("--image-pan-x", `${50 - state.imageX}%`);
+        root.style.setProperty("--image-pan-y", `${50 - state.imageY}%`);
         root.style.setProperty("--brightness", `${state.brightness}%`);
         root.style.setProperty("--contrast", `${state.contrast}%`);
         root.style.setProperty("--saturation", `${state.saturation}%`);
         root.style.setProperty("--overlay-opacity", state.overlayOpacity);
+        root.style.setProperty("--frame-opacity", state.frameOpacity);
+        root.style.setProperty("--marquee-opacity", state.marqueeOpacity);
+        root.style.setProperty("--avatar-x", `${state.avatarX}%`);
+        root.style.setProperty("--avatar-y", `${state.avatarY}%`);
+        root.style.setProperty("--avatar-scale", state.avatarScale);
+        root.style.setProperty("--avatar-opacity", state.avatarOpacity);
+        root.style.setProperty("--quick-links-display", state.showQuickLinks ? "flex" : "none");
 
         $("titlePreview").innerHTML = state.titleLines
           .split("\n")
@@ -794,6 +1141,12 @@ NEWS</textarea>
         $("englishPreview").textContent = state.englishText;
         $("eyebrowPreview").textContent = state.eyebrow;
         $("subtitlePreview").textContent = state.subtitle;
+        $("brandPreview").textContent = state.brandText;
+        $("marqueePreviewA").textContent = state.marqueeText;
+        $("marqueePreviewB").textContent = state.marqueeText;
+        $("marqueePreviewC").textContent = state.marqueeText;
+        $("metaIndexPreview").textContent = state.metaIndex;
+        $("metaKeyPreview").textContent = state.metaKey;
 
         if (state.imagePath && heroImage.dataset.uploaded !== "true") {
           heroImage.src = state.imagePath;
@@ -801,6 +1154,17 @@ NEWS</textarea>
 
         jsonOutput.value = JSON.stringify(getExportPayload(state), null, 2);
         updateValueLabels(state);
+      }
+
+      function normalizeImportPayload(payload) {
+        const next = { ...presets.lingShanJson, ...payload };
+        if (Array.isArray(next.titleLines)) {
+          next.titleLines = next.titleLines.join("\n");
+        }
+        if (typeof next.showQuickLinks === "boolean") {
+          next.showQuickLinks = next.showQuickLinks ? 1 : 0;
+        }
+        return next;
       }
 
       function escapeHtml(value) {
@@ -865,6 +1229,23 @@ NEWS</textarea>
         }, 1600);
       });
 
+      $("applyJson").addEventListener("click", () => {
+        try {
+          const payload = JSON.parse(jsonInput.value);
+          heroImage.dataset.uploaded = "false";
+          setControlValues(normalizeImportPayload(payload));
+          updatePreview();
+          copyState.textContent = "Imported.";
+        } catch (error) {
+          copyState.textContent = `Import failed: ${error.message}`;
+        }
+        window.setTimeout(() => {
+          copyState.textContent = "";
+        }, 2200);
+      });
+
+      setControlValues(presets.lingShanJson);
+      jsonInput.value = JSON.stringify(getExportPayload(readState()), null, 2);
       updatePreview();
     </script>
   </body>
