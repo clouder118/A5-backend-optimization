@@ -1,20 +1,66 @@
 import { EnvironmentOutlined, MessageOutlined } from '@ant-design/icons';
-import { Button, Typography } from 'antd';
+import { Button } from 'antd';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import Snap from 'lenis/snap';
+import type { CSSProperties } from 'react';
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import AvatarGuide from '../../components/guide/AvatarGuide';
 
-const heroScenes = [
+type HeroScene = {
+  key: string;
+  eyebrow: string;
+  title: string;
+  titleLines?: string[];
+  englishText?: string;
+  subtitle: string;
+  image: string;
+  tone: 'jade' | 'amber' | 'water';
+  fontSize?: number;
+  lineHeight?: number;
+  titleX?: number;
+  titleY?: number;
+  titleWidth?: number;
+  titleColor?: string;
+  englishFontSize?: number;
+  englishX?: number;
+  englishY?: number;
+  imageScale?: number;
+  imageX?: number;
+  imageY?: number;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  overlayOpacity?: number;
+};
+
+const heroScenes: HeroScene[] = [
   {
     key: 'buddha',
-    eyebrow: 'Ling Shan Grand Buddha',
-    title: '灵山胜境导览',
+    eyebrow: '',
+    title: '灵山胜景',
+    titleLines: ['  灵山', '胜     景'],
+    englishText: 'Sacred Mountain\n Scenic Spot',
     subtitle: '以数字人导游陪你看见山水、佛韵与游线之间的秩序。',
-    image: '/scenic/spots/photos/NH-001_拈花广场/2.jpg',
+    image: '/scenic/spots/photos/NH-001_拈花广场/1.jpg',
+    fontSize: 110,
+    lineHeight: 0.9,
+    titleX: 43,
+    titleY: 47,
+    titleWidth: 58,
+    titleColor: '#c7f0d3',
+    englishFontSize: 21,
+    englishX: 36,
+    englishY: 50,
+    imageScale: 1,
+    imageX: 28,
+    imageY: 40,
+    brightness: 130,
+    contrast: 116,
+    saturation: 101,
+    overlayOpacity: 0,
     tone: 'jade',
   },
   {
@@ -33,7 +79,57 @@ const heroScenes = [
     image: '/scenic/spots/photos/NH-004_拈花堂/2.jpg',
     tone: 'water',
   },
-] as const;
+];
+
+const marqueeItems = ['灵山胜景', 'Sacred Mountain', '灵山胜景', 'Scenic Spot'];
+
+function getSceneStyle(scene: HeroScene) {
+  return {
+    '--hero-image-scale': scene.imageScale ?? 1,
+    '--hero-image-x': `${scene.imageX ?? 50}%`,
+    '--hero-image-y': `${scene.imageY ?? 50}%`,
+    '--hero-brightness': `${scene.brightness ?? 72}%`,
+    '--hero-contrast': `${scene.contrast ?? 112}%`,
+    '--hero-saturation': `${scene.saturation ?? 86}%`,
+    '--hero-overlay-opacity': scene.overlayOpacity ?? 0.34,
+    '--poster-title-size': `${scene.fontSize ?? 112}px`,
+    '--poster-line-height': scene.lineHeight ?? 0.9,
+    '--poster-title-x': `${scene.titleX ?? 43}%`,
+    '--poster-title-y': `${scene.titleY ?? 47}%`,
+    '--poster-title-width': `${scene.titleWidth ?? 58}%`,
+    '--poster-title-color': scene.titleColor ?? '#f2f0e9',
+    '--poster-english-size': `${scene.englishFontSize ?? 24}px`,
+    '--poster-english-x': `${scene.englishX ?? 50}%`,
+    '--poster-english-y': `${scene.englishY ?? 52}%`,
+  } as CSSProperties;
+}
+
+function HeroTitleGroup({ scene }: { scene: HeroScene }) {
+  if (scene.titleLines) {
+    return (
+      <>
+        {scene.eyebrow ? <span className="luxury-eyebrow poster-eyebrow">{scene.eyebrow}</span> : null}
+        <h1 className="poster-title-group" aria-label={scene.title}>
+          {scene.titleLines.map((line) => (
+            <span className="poster-title-line" key={line}>
+              {line}
+            </span>
+          ))}
+        </h1>
+        <div className="poster-title-en">{scene.englishText}</div>
+        <p className="poster-title-subtitle">{scene.subtitle}</p>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <span className="luxury-eyebrow">{scene.eyebrow}</span>
+      <h1 className="luxury-hero-title">{scene.title}</h1>
+      <p className="luxury-hero-subtitle">{scene.subtitle}</p>
+    </>
+  );
+}
 
 export default function HomePage() {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -53,13 +149,14 @@ export default function HomePage() {
       content,
       infinite: true,
       syncTouch: true,
-      lerp: 0.08,
-      wheelMultiplier: 0.9,
+      lerp: 0.07,
+      wheelMultiplier: 0.55,
     });
     const snap = new Snap(lenis, {
-      type: 'mandatory',
-      debounce: 420,
-      duration: 0.9,
+      type: 'proximity',
+      distanceThreshold: '45%',
+      debounce: 120,
+      duration: 0.82,
       easing: (t: number) => 1 - Math.pow(1 - t, 4),
     });
     snap.addElements(Array.from(wrapper.querySelectorAll<HTMLElement>('.luxury-hero-panel')), {
@@ -85,44 +182,9 @@ export default function HomePage() {
     });
 
     const ctx = gsap.context(() => {
-      const marquee = document.querySelector('.luxury-marquee-track');
-      if (marquee) {
-        gsap.fromTo(
-          marquee,
-          { xPercent: 0 },
-          {
-            xPercent: -50,
-            duration: 18,
-            ease: 'none',
-            repeat: -1,
-          },
-        );
-      }
-
       wrapper.querySelectorAll<HTMLElement>('.luxury-hero-panel').forEach((panel) => {
-        const art = panel.querySelector('.luxury-scenic-art');
         const copy = panel.querySelector('.luxury-scene-copy');
         const meta = panel.querySelector('.luxury-scene-meta');
-
-        if (art) {
-          gsap.fromTo(
-            art,
-            { yPercent: -18, scale: 1.12 },
-            {
-              yPercent: 18,
-              scale: 1,
-              ease: 'none',
-              scrollTrigger: {
-                scroller: wrapper,
-                trigger: panel,
-                start: 'top bottom',
-                end: 'bottom top',
-                scrub: true,
-                fastScrollEnd: true,
-              },
-            },
-          );
-        }
 
         const animatedText = [copy, meta].filter(Boolean);
         if (animatedText.length > 0) {
@@ -164,46 +226,22 @@ export default function HomePage() {
     };
   }, []);
 
-  useEffect(() => {
-    const home = wrapperRef.current?.closest<HTMLElement>('.luxury-home');
-    if (!home) {
-      return undefined;
-    }
-
-    let animationFrame = 0;
-    const updateHintPosition = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse') {
-        return;
-      }
-      window.cancelAnimationFrame(animationFrame);
-      animationFrame = window.requestAnimationFrame(() => {
-        home.style.setProperty('--scroll-hint-x', `${event.clientX}px`);
-        home.style.setProperty('--scroll-hint-y', `${event.clientY}px`);
-        home.classList.add('has-pointer-hint');
-      });
-    };
-
-    window.addEventListener('pointermove', updateHintPosition, { passive: true });
-
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-      window.removeEventListener('pointermove', updateHintPosition);
-    };
-  }, []);
-
   return (
     <div className="luxury-home">
       <div className="luxury-scroll-wrapper" ref={wrapperRef}>
         <div className="luxury-scroll-content" ref={contentRef}>
           {heroScenes.map((scene, index) => (
-            <section className={`luxury-hero-panel tone-${scene.tone}`} key={scene.key} data-cue="[ SCENE ]">
+            <section
+              className={`luxury-hero-panel tone-${scene.tone}`}
+              key={scene.key}
+              style={getSceneStyle(scene)}
+              data-cue="[ SCENE ]"
+            >
               <div className="luxury-scene-backdrop">
                 <img className="luxury-scenic-art" src={scene.image} alt="" aria-hidden="true" />
               </div>
-              <div className="luxury-scene-copy">
-                <span className="luxury-eyebrow">{scene.eyebrow}</span>
-                <Typography.Title className="luxury-hero-title">{scene.title}</Typography.Title>
-                <Typography.Paragraph className="luxury-hero-subtitle">{scene.subtitle}</Typography.Paragraph>
+              <div className={`luxury-scene-copy ${'titleLines' in scene ? 'is-poster' : ''}`}>
+                <HeroTitleGroup scene={scene} />
               </div>
               <div className="luxury-scene-meta">
                 <span>{String(index + 1).padStart(2, '0')}</span>
@@ -222,9 +260,11 @@ export default function HomePage() {
 
       <div className="luxury-fixed-layer">
         <div className="luxury-marquee" aria-hidden="true">
-          <div className="luxury-marquee-track">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <span key={index}>灵山胜境导览</span>
+          <div className="luxury-marquee-orbit">
+            {Array.from({ length: 12 }).map((_, index) => (
+              <span key={index} style={{ '--item-index': index } as CSSProperties}>
+                {marqueeItems[index % marqueeItems.length]}
+              </span>
             ))}
           </div>
         </div>
