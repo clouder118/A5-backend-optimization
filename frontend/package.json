@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build --configLoader runner",
     "preview": "vite preview --configLoader runner --host 127.0.0.1 --port 5173 --strictPort",
     "verify:visitor": "node scripts/verify-visitor-flow.mjs",
+    "verify:spot-detail": "node scripts/verify-spot-detail.mjs",
     "verify:admin": "node scripts/verify-admin-flow.mjs",
     "verify:haru": "node scripts/verify-haru-live2d.mjs",
     "verify:haru-motions": "node scripts/verify-haru-motions.mjs",
