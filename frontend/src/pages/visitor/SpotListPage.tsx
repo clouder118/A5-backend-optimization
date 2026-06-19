@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Col, Row, Typography } from 'antd';
 import EmptyState from '../../components/common/EmptyState';
 import ErrorState from '../../components/common/ErrorState';
 import PageLoading from '../../components/common/PageLoading';
-import SpotCard from '../../components/scenic/SpotCard';
+import SpotReel from '../../components/scenic/SpotReel';
 import { getSpots } from '../../api/spots';
 import type { ScenicSpot } from '../../types/scenic';
 
@@ -34,26 +33,8 @@ export default function SpotListPage() {
   }
 
   return (
-    <div className="page-stack">
-      <div className="video-page-heading">
-        <Typography.Text className="mono-label">[ SCENIC ARCHIVE ]</Typography.Text>
-        <Typography.Title level={1} style={{ margin: 0 }}>
-          灵山胜境景点
-        </Typography.Title>
-        <Typography.Paragraph>山门、佛像、梵宫与拈花湾，在同一条静默动线上展开。</Typography.Paragraph>
-      </div>
-
-      {spots.length === 0 ? (
-        <EmptyState title="暂无景点" description="请先准备景区种子数据。" />
-      ) : (
-        <Row className="spot-grid" gutter={[18, 18]}>
-          {spots.map((spot, index) => (
-            <Col xs={24} sm={12} lg={8} key={spot.id}>
-              <SpotCard spot={spot} index={index + 1} />
-            </Col>
-          ))}
-        </Row>
-      )}
+    <div className="spot-reel-page">
+      {spots.length === 0 ? <EmptyState title="暂无景点" description="请先准备景区种子数据。" /> : <SpotReel spots={spots} />}
     </div>
   );
 }

@@ -14,12 +14,13 @@ const navItems: MenuProps['items'] = [
 export default function VisitorLayout() {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const isSpots = location.pathname === '/spots';
   const selectedKey =
     navItems?.find((item) => typeof item?.key === 'string' && location.pathname === item.key)?.key?.toString() ||
     (location.pathname.startsWith('/spots') ? '/spots' : '/');
 
   return (
-    <Layout className={`visitor-layout ${isHome ? 'visitor-layout-home' : ''}`}>
+    <Layout className={`visitor-layout ${isHome ? 'visitor-layout-home' : ''} ${isSpots ? 'visitor-layout-spots' : ''}`}>
       <Layout.Header className="visitor-header">
         <Link to="/" className="brand-mark" data-cue="[ HOME ]">
           <span className="brand-symbol" aria-hidden="true">
