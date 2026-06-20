@@ -5,22 +5,77 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import Snap from 'lenis/snap';
 import { useEffect, useRef } from 'react';
+import type { CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import AvatarGuide from '../../components/guide/AvatarGuide';
+import { useVisitorAuth } from '../../utils/visitorAuthContext';
+
+type HeroTuning = {
+  titleLines?: string[];
+  englishText?: string;
+  fontSize?: number;
+  lineHeight?: number;
+  titleX?: number;
+  titleY?: number;
+  imageScale?: number;
+  imageX?: number;
+  imageY?: number;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  overlayOpacity?: number;
+  titleWidth?: number;
+  titleColor?: string;
+  englishFontSize?: number;
+  englishX?: number;
+  englishY?: number;
+};
+
+type HeroScene = {
+  key: string;
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  subtitleEn?: string;
+  image: string;
+  tone: 'jade' | 'amber' | 'water';
+  tuning?: HeroTuning;
+};
 
 const heroScenes = [
   {
     key: 'buddha',
-    eyebrow: 'Ling Shan Grand Buddha',
+    eyebrow: '',
     title: '灵山胜境导览',
     subtitle: '以数字人导游陪你看见山水、佛韵与游线之间的秩序。',
-    image: '/scenic/spots/photos/NH-001_拈花广场/2.jpg',
+    subtitleEn: 'Your AI guide is all you need.',
+    image: '/scenic/spots/photos/NH-001_拈花广场/1.jpg',
     tone: 'jade',
+    tuning: {
+      titleLines: ['  靈山', '勝     景'],
+      englishText: 'Sacred Mountain\n Scenic Spot',
+      fontSize: 110,
+      lineHeight: 0.9,
+      titleX: 43,
+      titleY: 50,
+      imageScale: 1,
+      imageX: 60,
+      imageY: 70,
+      brightness: 130,
+      contrast: 116,
+      saturation: 101,
+      overlayOpacity: 0,
+      titleWidth: 58,
+      titleColor: '#c7f0d3',
+      englishFontSize: 18,
+      englishX: 27,
+      englishY: 50,
+    },
   },
   {
     key: 'palace',
     eyebrow: 'Brahma Palace',
-    title: '梵宫典藏',
+    title: '典藏',
     subtitle: '用更安静的节奏收起复杂信息，让景点故事在需要时展开。',
     image: '/scenic/spots/photos/NH-003_香月花街/2.jpg',
     tone: 'amber',
@@ -28,16 +83,45 @@ const heroScenes = [
   {
     key: 'water',
     eyebrow: 'Nine Dragons Bathing',
-    title: '礼宾路线',
+    title: '路線优選',
     subtitle: '从亲子、长者、摄影到文化游，把路线建议做成从容的抵达。',
     image: '/scenic/spots/photos/NH-004_拈花堂/2.jpg',
     tone: 'water',
   },
-] as const;
+] satisfies HeroScene[];
+
+function getHeroStyle(tuning?: HeroTuning): CSSProperties | undefined {
+  if (!tuning) {
+    return undefined;
+  }
+
+  return {
+    '--hero-title-size': tuning.fontSize ? `${tuning.fontSize}px` : undefined,
+    '--hero-line-height': tuning.lineHeight,
+    '--hero-title-x': tuning.titleX !== undefined ? `${tuning.titleX}%` : undefined,
+    '--hero-title-y': tuning.titleY !== undefined ? `${tuning.titleY}%` : undefined,
+    '--hero-title-width': tuning.titleWidth !== undefined ? `${tuning.titleWidth}%` : undefined,
+    '--hero-title-color': tuning.titleColor,
+    '--hero-title-anchor-x': '-50%',
+    '--hero-image-scale': tuning.imageScale,
+    '--hero-image-x': tuning.imageX !== undefined ? `${tuning.imageX}%` : undefined,
+    '--hero-image-y': tuning.imageY !== undefined ? `${tuning.imageY}%` : undefined,
+    '--hero-image-pan-x': tuning.imageX !== undefined ? `${50 - tuning.imageX}%` : undefined,
+    '--hero-image-pan-y': tuning.imageY !== undefined ? `${50 - tuning.imageY}%` : undefined,
+    '--hero-brightness': tuning.brightness !== undefined ? `${tuning.brightness}%` : undefined,
+    '--hero-contrast': tuning.contrast !== undefined ? `${tuning.contrast}%` : undefined,
+    '--hero-saturation': tuning.saturation !== undefined ? `${tuning.saturation}%` : undefined,
+    '--hero-overlay-opacity': tuning.overlayOpacity,
+    '--hero-english-size': tuning.englishFontSize ? `${tuning.englishFontSize}px` : undefined,
+    '--hero-english-x': tuning.englishX !== undefined ? `${tuning.englishX}%` : undefined,
+    '--hero-english-y': tuning.englishY !== undefined ? `${tuning.englishY}%` : undefined,
+  } as CSSProperties;
+}
 
 export default function HomePage() {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const { user } = useVisitorAuth();
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -51,6 +135,7 @@ export default function HomePage() {
     const lenis = new Lenis({
       wrapper,
       content,
+      eventsTarget: window,
       infinite: true,
       syncTouch: true,
       lerp: 0.08,
@@ -100,7 +185,7 @@ export default function HomePage() {
       }
 
       wrapper.querySelectorAll<HTMLElement>('.luxury-hero-panel').forEach((panel) => {
-        const art = panel.querySelector('.luxury-scenic-art');
+        const art = panel.querySelector('.luxury-scene-backdrop');
         const copy = panel.querySelector('.luxury-scene-copy');
         const meta = panel.querySelector('.luxury-scene-meta');
 
@@ -169,15 +254,29 @@ export default function HomePage() {
       <div className="luxury-scroll-wrapper" ref={wrapperRef}>
         <div className="luxury-scroll-content" ref={contentRef}>
           {heroScenes.map((scene, index) => (
-            <section className={`luxury-hero-panel tone-${scene.tone}`} key={scene.key}>
+            <section className={`luxury-hero-panel tone-${scene.tone}`} key={scene.key} style={getHeroStyle(scene.tuning)}>
               <div className="luxury-scene-backdrop">
                 <img className="luxury-scenic-art" src={scene.image} alt="" aria-hidden="true" />
               </div>
               <div className="luxury-scene-copy">
-                <span className="luxury-eyebrow">{scene.eyebrow}</span>
-                <Typography.Title className="luxury-hero-title">{scene.title}</Typography.Title>
-                <Typography.Paragraph className="luxury-hero-subtitle">{scene.subtitle}</Typography.Paragraph>
+                {scene.eyebrow ? <span className="luxury-eyebrow">{scene.eyebrow}</span> : null}
+                <Typography.Title className="luxury-hero-title">
+                  {(scene.tuning?.titleLines ?? [scene.title]).map((line) => (
+                    <span className="luxury-hero-title-line" key={line}>
+                      {line}
+                    </span>
+                  ))}
+                </Typography.Title>
+                <Typography.Paragraph className="luxury-hero-subtitle">
+                  {scene.subtitle}
+                  {scene.subtitleEn ? <span className="luxury-hero-subtitle-en">{scene.subtitleEn}</span> : null}
+                </Typography.Paragraph>
               </div>
+              {scene.tuning?.englishText ? (
+                <div className="luxury-title-en" aria-hidden="true">
+                  {scene.tuning.englishText}
+                </div>
+              ) : null}
               <div className="luxury-scene-meta">
                 <span>{String(index + 1).padStart(2, '0')}</span>
                 <i />
@@ -203,18 +302,47 @@ export default function HomePage() {
         </div>
 
         <div className="luxury-avatar-stage">
-          <AvatarGuide status="idle" variant="stage" emotionCue="idle" stageMode="home" title="待命中" detail="" />
+          <AvatarGuide
+            status="idle"
+            variant="stage"
+            emotionCue="idle"
+            stageMode="home"
+            title="待命中"
+            detail=""
+            suppressInitialFallbackImage
+          />
         </div>
 
+        <div className="video-scroll-hint">[SCROLL DOWN]</div>
+
         <div className="luxury-quick-links">
-          <Link to="/guide">
-            <Button type="primary" icon={<MessageOutlined />}>
-              立即咨询
-            </Button>
-          </Link>
-          <Link to="/spots">
-            <Button icon={<EnvironmentOutlined />}>查看景点</Button>
-          </Link>
+          {user ? (
+            <>
+              <Link to="/guide">
+                <Button type="primary" icon={<MessageOutlined />} data-cue="[ GUIDE ]">
+                  [ GUIDE ]
+                </Button>
+              </Link>
+              <Link to="/spots">
+                <Button icon={<EnvironmentOutlined />} data-cue="[ SPOTS ]">
+                  [ SPOTS ]
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/login">
+                <Button type="primary" icon={<MessageOutlined />} data-cue="[ LOGIN ]">
+                  [ LOGIN TO EXPLORE ]
+                </Button>
+              </Link>
+              <Link to="/register">
+                <Button icon={<EnvironmentOutlined />} data-cue="[ REGISTER ]">
+                  [ CREATE ACCOUNT ]
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </div>

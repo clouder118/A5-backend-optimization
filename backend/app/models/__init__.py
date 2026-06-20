@@ -2,7 +2,7 @@
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
@@ -166,6 +166,19 @@ class WebFactCandidate(Base):
     answer_excerpt: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(40), default="pending_review")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+
+class AppUser(Base):
+    __tablename__ = "app_user"
+    __table_args__ = (UniqueConstraint("username", "role", name="uq_app_user_username_role"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    username: Mapped[str] = mapped_column(String(32), nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(300), nullable=False)
+    role: Mapped[str] = mapped_column(String(40), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class ChatSession(Base):

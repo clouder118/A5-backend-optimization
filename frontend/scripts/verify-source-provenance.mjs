@@ -5,8 +5,6 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
-const workspaceRoot = path.resolve(projectRoot, '..');
-const browserPath = path.join(workspaceRoot, '.cache', 'ms-playwright');
 const outputDir = path.join(projectRoot, 'test-results', 'source-provenance');
 const baseUrl = process.env.VISITOR_VERIFY_URL || 'http://127.0.0.1:5175';
 
@@ -34,11 +32,11 @@ async function ensureServer() {
     return undefined;
   }
 
-  const child = spawn('npm.cmd run dev -- --port 5175', {
+  const child = spawn('npm.cmd run dev:visitor -- --port 5175', {
     cwd: projectRoot,
     env: {
       ...process.env,
-      PLAYWRIGHT_BROWSERS_PATH: browserPath,
+      VITE_USE_MOCK_API: 'false',
     },
     shell: true,
     stdio: 'ignore',
@@ -47,6 +45,22 @@ async function ensureServer() {
 
   await waitForServer();
   return child;
+}
+
+async function stopServer(child) {
+  if (!child || child.killed) {
+    return;
+  }
+  if (process.platform === 'win32' && child.pid) {
+    await new Promise((resolve) => {
+      spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], {
+        stdio: 'ignore',
+        windowsHide: true,
+      }).on('exit', resolve);
+    });
+    return;
+  }
+  child.kill();
 }
 
 function sseFinal(payload) {
@@ -168,12 +182,11 @@ function failIf(condition, message) {
 
 async function ask(page, question) {
   await page.locator('.chat-input-row textarea, .chat-input-row input').first().fill(question);
-    await page.locator('.chat-input-row button.ant-btn-primary').click();
+  await page.locator('.chat-input-row button.ant-btn-primary').click();
   await page.locator('.chat-bubble.assistant').last().waitFor({ timeout: 5000 });
 }
 
 async function main() {
-  process.env.PLAYWRIGHT_BROWSERS_PATH = browserPath;
   const { chromium } = await import('@playwright/test');
   await mkdir(outputDir, { recursive: true });
 
@@ -182,11 +195,41 @@ async function main() {
   const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
 
   try {
+    await page.route('**/api/auth/me', async (route) => {
+      const authorization = route.request().headers().authorization || '';
+      if (authorization === 'Bearer valid-visitor-token') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ id: 'visitor-1', username: 'visitor_001', role: 'visitor' }),
+        });
+        return;
+      }
+      await route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Missing visitor token' }),
+      });
+    });
     await page.route('**/api/chat/stream', async (route) => {
+      if (route.request().method() === 'OPTIONS') {
+        await route.fulfill({
+          status: 204,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Headers': 'content-type',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          },
+        });
+        return;
+      }
       const payload = route.request().postDataJSON();
       await route.fulfill({
         status: 200,
         contentType: 'text/event-stream',
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        },
         body: sseFinal(responseForQuestion(payload.question)),
       });
     });
@@ -198,6 +241,8 @@ async function main() {
       });
     });
 
+    await page.goto(baseUrl, { waitUntil: 'networkidle' });
+    await page.evaluate(() => localStorage.setItem('a5_visitor_token', 'valid-visitor-token'));
     await page.goto(`${baseUrl}/guide`, { waitUntil: 'networkidle' });
 
     await ask(page, '数据库来源验证');
@@ -225,9 +270,7 @@ async function main() {
     console.log(JSON.stringify({ ok: true, outputDir }, null, 2));
   } finally {
     await browser.close();
-    if (server) {
-      server.kill();
-    }
+    await stopServer(server);
   }
 }
 

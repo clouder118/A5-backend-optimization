@@ -20,7 +20,7 @@ class MimoClient:
     def chat_completion(self, model: str, system_prompt: str, user_prompt: str) -> str:
         payload = self._chat_payload(model, system_prompt, user_prompt, stream=False)
         response = self._post_chat_completions(payload)
-        return response["choices"][0]["message"]["content"]
+        return response["choices"][0]["message"]["content"] or ""
 
     def web_search_completion(
         self,
@@ -122,7 +122,7 @@ class MimoClient:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "max_completion_tokens": 1024,
+            "max_completion_tokens": 4096,
             "temperature": 0.7,
             "top_p": 0.95,
             "stream": stream,

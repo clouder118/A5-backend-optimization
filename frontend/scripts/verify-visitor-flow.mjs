@@ -5,8 +5,6 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
-const workspaceRoot = path.resolve(projectRoot, '..');
-const browserPath = path.join(workspaceRoot, '.cache', 'ms-playwright');
 const outputDir = path.join(projectRoot, 'test-results', 'visitor-flow');
 const baseUrl = process.env.VISITOR_VERIFY_URL || 'http://127.0.0.1:5176';
 
@@ -42,11 +40,10 @@ async function ensureServer() {
     return undefined;
   }
 
-  const child = spawn('npm.cmd run dev -- --port 5176', {
+  const child = spawn('npm.cmd run dev:visitor -- --port 5176', {
     cwd: projectRoot,
     env: {
       ...process.env,
-      PLAYWRIGHT_BROWSERS_PATH: browserPath,
       VITE_USE_MOCK_API: 'true',
     },
     shell: true,
@@ -64,8 +61,12 @@ function failIf(condition, message) {
   }
 }
 
+async function assertNoHorizontalOverflow(page, label) {
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  failIf(overflow > 1, `${label} should not have horizontal overflow, got ${overflow}px`);
+}
+
 async function main() {
-  process.env.PLAYWRIGHT_BROWSERS_PATH = browserPath;
   const { chromium } = await import('@playwright/test');
   await mkdir(outputDir, { recursive: true });
 
@@ -82,17 +83,41 @@ async function main() {
   });
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
+  await page.route('**/api/auth/me', async (route) => {
+    const authorization = route.request().headers().authorization || '';
+    if (authorization === 'Bearer valid-visitor-token') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 'visitor-1', username: 'visitor_001', role: 'visitor' }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ message: '登录状态无效', code: 'AUTH_TOKEN_INVALID', status: 401 }),
+    });
+  });
+
   try {
     const routeResults = [];
+
+    await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    const guestBody = await page.locator('body').innerText();
+    failIf(!guestBody.includes('[ LOGIN ]'), 'Guest visitor home should show LOGIN');
+    failIf(guestBody.includes('[ OPS ]'), 'Visitor port should not expose OPS entry');
+    await page.goto(`${baseUrl}/admin`, { waitUntil: 'networkidle' });
+    await page.waitForURL(`${baseUrl}/`);
+    failIf((await page.locator('body').innerText()).includes('[ OPS LOGIN ]'), 'Visitor port /admin must not render admin login');
+
+    await page.evaluate(() => localStorage.setItem('a5_visitor_token', 'valid-visitor-token'));
 
     for (const route of routes) {
       await page.goto(`${baseUrl}${route.path}`, { waitUntil: 'networkidle' });
       const body = await page.locator('body').innerText();
       failIf(!body.includes(route.title), `Missing expected text on ${route.path}: ${route.title}`);
       failIf((await page.locator('main').count()) < 1, `Missing main content on ${route.path}`);
-      if (route.path === '/') {
-        await page.getByRole('button', { name: /管理后台/ }).waitFor({ timeout: 5000 });
-      }
       await page.screenshot({ path: path.join(outputDir, route.shot), fullPage: true });
       routeResults.push({ path: route.path, ok: true, screenshot: route.shot });
     }
@@ -115,8 +140,10 @@ async function main() {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    await assertNoHorizontalOverflow(page, 'mobile visitor home');
     await page.screenshot({ path: path.join(outputDir, '08-home-mobile.png'), fullPage: true });
     await page.goto(`${baseUrl}/guide`, { waitUntil: 'networkidle' });
+    await assertNoHorizontalOverflow(page, 'mobile AI guide');
     await page.screenshot({ path: path.join(outputDir, '09-guide-mobile.png'), fullPage: true });
 
     failIf(consoleErrors.length > 0, `Browser console errors:\n${consoleErrors.join('\n')}`);
@@ -127,7 +154,6 @@ async function main() {
         {
           ok: true,
           baseUrl,
-          browserPath,
           outputDir,
           checkedRoutes: routeResults,
           chatFlow: 'ok',

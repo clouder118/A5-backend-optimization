@@ -8,5 +8,5 @@ for %%P in (5173 5174 5175 5176 8001 5200) do (
   )
 )
 
-echo Local V1 ports are clear: 5173, 5174, 5175, 5176, 8001, 5200
+echo Local A5 ports are clear: visitor 5173, admin 5174, backend 8001
 if /I not "%~1"=="nopause" pause

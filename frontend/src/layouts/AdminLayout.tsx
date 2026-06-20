@@ -6,32 +6,90 @@ import {
   MessageOutlined,
   NodeIndexOutlined,
 } from '@ant-design/icons';
-import { Layout, Menu, Space, Typography } from 'antd';
+import { Button, Layout, Menu, Space, Typography } from 'antd';
 import type { MenuProps } from 'antd';
-import { Link, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { clearAdminToken, getCurrentUser, readAdminToken } from '../api/auth';
 import { productCopy } from '../config/product';
+import type { AuthUser } from '../types/api';
 
 const adminItems: MenuProps['items'] = [
-  { key: '/admin/dashboard', icon: <DashboardOutlined />, label: <Link to="/admin/dashboard">数据看板</Link> },
-  { key: '/admin/spots', icon: <HomeOutlined />, label: <Link to="/admin/spots">景点管理</Link> },
-  { key: '/admin/routes', icon: <NodeIndexOutlined />, label: <Link to="/admin/routes">路线管理</Link> },
-  { key: '/admin/knowledge', icon: <DatabaseOutlined />, label: <Link to="/admin/knowledge">知识库管理</Link> },
-  { key: '/admin/logs', icon: <MessageOutlined />, label: <Link to="/admin/logs">问答日志</Link> },
+  { key: '/dashboard', icon: <DashboardOutlined />, label: <Link to="/dashboard">数据看板</Link> },
+  { key: '/spots', icon: <HomeOutlined />, label: <Link to="/spots">景点管理</Link> },
+  { key: '/routes', icon: <NodeIndexOutlined />, label: <Link to="/routes">路线管理</Link> },
+  { key: '/knowledge', icon: <DatabaseOutlined />, label: <Link to="/knowledge">知识库管理</Link> },
+  { key: '/logs', icon: <MessageOutlined />, label: <Link to="/logs">问答日志</Link> },
 ];
 
 const adminNavItems = adminItems ?? [];
 
 export default function AdminLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
   const selectedKey =
     adminNavItems.find((item) => typeof item?.key === 'string' && location.pathname.startsWith(item.key))?.key?.toString() ??
-    '/admin/dashboard';
+    '/dashboard';
+
+  useEffect(() => {
+    let cancelled = false;
+    const token = readAdminToken();
+    if (!token) {
+      setUser(null);
+      setLoading(false);
+      navigate('/login', { replace: true });
+      return undefined;
+    }
+
+    setLoading(true);
+    getCurrentUser(token)
+      .then((currentUser) => {
+        if (cancelled) {
+          return;
+        }
+        if (currentUser.role !== 'admin') {
+          clearAdminToken();
+          setUser(null);
+          navigate('/login', { replace: true });
+          return;
+        }
+        setUser(currentUser);
+      })
+      .catch(() => {
+        clearAdminToken();
+        if (!cancelled) {
+          setUser(null);
+          navigate('/login', { replace: true });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate]);
+
+  function logout() {
+    clearAdminToken();
+    setUser(null);
+    navigate('/login', { replace: true });
+  }
+
+  if (loading || !user) {
+    return <div className="admin-auth-loading">[ OPS ]</div>;
+  }
 
   return (
     <Layout className="admin-layout">
       <Layout.Sider className="admin-sider" width={232} breakpoint="lg" collapsedWidth={0}>
-        <Link to="/admin/dashboard" className="admin-brand">
-          <span className="brand-icon">
+        <Link to="/dashboard" className="admin-brand">
+          <span className="brand-symbol admin-brand-symbol">
             <FileSearchOutlined />
           </span>
           <span>{productCopy.adminBrandName}</span>
@@ -42,9 +100,13 @@ export default function AdminLayout() {
         <Layout.Header className="admin-header">
           <Space direction="vertical" size={0}>
             <Typography.Text strong>{productCopy.adminTitle}</Typography.Text>
-            <Typography.Text type="secondary">管理后台 · 景区资料库与问答运营</Typography.Text>
+            <Typography.Text type="secondary">[ OPERATIONS ] 景区资料库与问答运营</Typography.Text>
           </Space>
-          <Link to="/">返回游客端</Link>
+          <Space>
+            <Typography.Text className="admin-user-label">[ {user.username} ]</Typography.Text>
+            <Button onClick={logout}>[ LOG OUT ]</Button>
+            <a href="http://127.0.0.1:5173/">[ VISITOR ]</a>
+          </Space>
         </Layout.Header>
         <Layout.Content className="admin-content">
           <Outlet />

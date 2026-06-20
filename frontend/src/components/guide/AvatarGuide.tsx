@@ -22,6 +22,7 @@ export interface AvatarGuideProps {
   modelUrl?: string;
   fallbackImageUrl?: string;
   enableLive2D?: boolean;
+  suppressInitialFallbackImage?: boolean;
 }
 
 const statusText: Record<GuideStatus, { label: string; detail: string; badge: 'default' | 'processing' | 'success' }> = {
@@ -67,6 +68,7 @@ export default function AvatarGuide({
   modelUrl = defaultModelUrl,
   fallbackImageUrl = defaultFallbackImageUrl,
   enableLive2D = true,
+  suppressInitialFallbackImage = false,
 }: AvatarGuideProps) {
   const current = statusText[status];
   const audio = audioStateText[audioState];
@@ -78,6 +80,8 @@ export default function AvatarGuide({
   const [ambientCue, setAmbientCue] = useState<GuideEmotionCue>('idle');
   const lastActivityAtRef = useRef(Date.now());
   const shouldUseLive2D = variant === 'stage' && enableLive2D && !live2dError && live2dCanLoad;
+  const shouldSuppressImage =
+    suppressInitialFallbackImage && variant === 'stage' && enableLive2D && !live2dError && !live2dCanLoad;
   const explicitEmotionCue = emotionCue && emotionCue !== 'idle' ? emotionCue : undefined;
   const resolvedEmotionCue = useMemo<GuideEmotionCue>(() => {
     if (
@@ -151,7 +155,7 @@ export default function AvatarGuide({
     <div className={`avatar-guide avatar-guide-${variant} avatar-guide-${stageMode} is-${status} audio-${audioState}`}>
       <div
         className={`avatar-stage-shell ${
-          shouldUseLive2D ? 'has-live2d' : imageFailed ? 'has-fallback' : 'has-image'
+          shouldUseLive2D ? 'has-live2d' : shouldSuppressImage ? 'is-awaiting-live2d' : imageFailed ? 'has-fallback' : 'has-image'
         }`}
         aria-label="AI 数字人导游"
       >
@@ -172,7 +176,7 @@ export default function AvatarGuide({
             onInteract={registerActivity}
             onError={(message) => setLive2dError(message)}
           />
-        ) : (
+        ) : shouldSuppressImage ? null : (
           <>
             <img
               className="avatar-character"

@@ -135,8 +135,9 @@ export default function SpeechInputButton({
         loading={status === 'requesting'}
         danger={listening}
         onClick={listening ? stopListening : startListening}
+        data-cue={listening ? '[ STOP ]' : '[ VOICE ]'}
       >
-        {listening ? '停止' : '语音'}
+        {listening ? '[ STOP ]' : '[ VOICE ]'}
       </Button>
     </Tooltip>
   );

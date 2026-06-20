@@ -1,4 +1,4 @@
-import { requestJson } from './client';
+import { requestAdminJson } from './adminClient';
 import { USE_MOCK_API } from './config';
 import type {
   KnowledgeDocItem,
@@ -32,7 +32,7 @@ function mapKnowledgeDoc(item: BackendKnowledgeDoc): KnowledgeDocItem {
 
 export async function listKnowledgeDocs(): Promise<KnowledgeDocItem[]> {
   if (!USE_MOCK_API) {
-    const response = await requestJson<{
+    const response = await requestAdminJson<{
       items: BackendKnowledgeDoc[];
       total: number;
     }>('/api/knowledge/docs');
@@ -62,7 +62,7 @@ export async function listKnowledgeDocs(): Promise<KnowledgeDocItem[]> {
 
 export async function rebuildKnowledgeIndex(): Promise<KnowledgeRebuildResult> {
   if (!USE_MOCK_API) {
-    const response = await requestJson<{
+    const response = await requestAdminJson<{
       status: string;
       doc_count: number;
       chunk_count: number;
@@ -131,7 +131,7 @@ export async function listWebFactCandidates(status: WebFactCandidateStatus | '' 
   if (status) {
     params.set('status', status);
   }
-  const response = await requestJson<{
+  const response = await requestAdminJson<{
     items: BackendWebFactCandidate[];
     total: number;
   }>(`/api/admin/web-fact-candidates${params.toString() ? `?${params.toString()}` : ''}`);
@@ -142,7 +142,7 @@ export async function reviewWebFactCandidate(
   candidateId: number,
   action: WebFactReviewAction,
 ): Promise<WebFactCandidate> {
-  const response = await requestJson<BackendWebFactCandidate, { action: WebFactReviewAction }>(
+  const response = await requestAdminJson<BackendWebFactCandidate, { action: WebFactReviewAction }>(
     `/api/admin/web-fact-candidates/${candidateId}/review`,
     {
       method: 'POST',

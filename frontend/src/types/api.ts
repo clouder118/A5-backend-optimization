@@ -5,6 +5,18 @@ export interface ApiError {
   detail?: unknown;
 }
 
+export interface AuthUser {
+  id: string;
+  username: string;
+  role: 'visitor' | 'admin';
+}
+
+export interface AuthResponse {
+  token: string;
+  tokenType: 'bearer';
+  user: AuthUser;
+}
+
 export interface KnowledgeRebuildResult {
   status: 'queued' | 'running' | 'completed' | 'failed';
   message: string;

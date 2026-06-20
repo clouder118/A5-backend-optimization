@@ -1,4 +1,4 @@
-import { requestJson } from './client';
+import { requestAdminJson } from './adminClient';
 import { USE_MOCK_API } from './config';
 import type { AdminDashboardData, BehaviorSummary } from '../types/api';
 
@@ -201,7 +201,7 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
     return mockDashboard;
   }
 
-  const response = await requestJson<BackendAdminDashboardData>('/api/admin/dashboard');
+  const response = await requestAdminJson<BackendAdminDashboardData>('/api/admin/dashboard');
   return {
     summary: {
       totalQuestions: response.summary.total_questions,

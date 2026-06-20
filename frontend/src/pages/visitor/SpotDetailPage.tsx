@@ -52,9 +52,11 @@ export default function SpotDetailPage() {
   )}&question=${encodeURIComponent(guideQuestion)}`;
 
   return (
-    <div className="page-stack">
+    <div className="page-stack spot-detail-page">
       <Link to="/spots">
-        <Button icon={<ArrowLeftOutlined />}>返回景点列表</Button>
+        <Button icon={<ArrowLeftOutlined />} data-cue="[ BACK ]">
+          [ BACK ]
+        </Button>
       </Link>
 
       <Card className="spot-detail-hero">
@@ -77,6 +79,7 @@ export default function SpotDetailPage() {
           <Col xs={24} lg={15}>
             <Space direction="vertical" size={16} style={{ width: '100%' }}>
               <div>
+                <Typography.Text className="mono-label">[ {spot.id.toUpperCase()} ]</Typography.Text>
                 <Typography.Title level={1} style={{ marginBottom: 6 }}>
                   {spot.name}
                 </Typography.Title>
@@ -94,12 +97,14 @@ export default function SpotDetailPage() {
               </Typography.Paragraph>
               <Space wrap>
                 <Link to={guideHref}>
-                  <Button type="primary" icon={<MessageOutlined />}>
-                    问 AI 导游讲这个景点
+                  <Button type="primary" icon={<MessageOutlined />} data-cue="[ ASK GUIDE ]">
+                    [ ASK GUIDE ]
                   </Button>
                 </Link>
                 <Link to="/routes">
-                  <Button icon={<CompassOutlined />}>加入路线推荐</Button>
+                  <Button icon={<CompassOutlined />} data-cue="[ ROUTE ]">
+                    [ ROUTE ]
+                  </Button>
                 </Link>
               </Space>
             </Space>
@@ -141,7 +146,7 @@ export default function SpotDetailPage() {
                   )}&question=${encodeURIComponent(question)}`}
                   key={question}
                 >
-                  <Button block icon={<MessageOutlined />}>
+                  <Button block icon={<MessageOutlined />} data-cue="[ ASK ]">
                     {question}
                   </Button>
                 </Link>

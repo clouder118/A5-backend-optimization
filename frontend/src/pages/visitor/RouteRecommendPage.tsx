@@ -41,8 +41,9 @@ export default function RouteRecommendPage() {
   const guideHref = `/guide?${guideParams.toString()}`;
 
   return (
-    <div className="page-stack">
-      <Space direction="vertical" size={6}>
+    <div className="page-stack route-page">
+      <Space className="video-page-heading" direction="vertical" size={6}>
+        <Typography.Text className="mono-label">[ ROUTE SYSTEM ]</Typography.Text>
         <Typography.Title level={1} style={{ margin: 0 }}>
           个性化路线推荐
         </Typography.Title>
@@ -61,8 +62,8 @@ export default function RouteRecommendPage() {
               message={`当前偏好：${formatVisitorPreference(preference)}`}
               action={
                 <Link to={guideHref}>
-                  <Button type="primary" size="small">
-                    带着偏好问 AI
+                  <Button type="primary" size="small" data-cue="[ GUIDE ]">
+                    [ GUIDE ]
                   </Button>
                 </Link>
               }

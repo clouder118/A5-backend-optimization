@@ -21,7 +21,14 @@ def env_value(name: str, default: str = ""):
 
 
 def env_value_with_alias(name: str, alias: str, default: str = ""):
-    return field(default_factory=lambda: os.getenv(name) or os.getenv(alias) or default)
+    return field(default_factory=lambda: os.getenv(alias) or os.getenv(name) or default)
+
+
+def resolve_backend_relative_path(value: str) -> str:
+    path = Path(value)
+    if path.is_absolute():
+        return str(path)
+    return str((BACKEND_ROOT / path).resolve())
 
 
 @dataclass(frozen=True)
@@ -72,6 +79,29 @@ class Settings:
     )
     admin_token: str = env_value("ADMIN_TOKEN", "")
     enable_admin_token: str = env_value("ENABLE_ADMIN_TOKEN", "false")
+    admin_default_username: str = env_value("ADMIN_DEFAULT_USERNAME", "admin")
+    admin_default_password: str = env_value("ADMIN_DEFAULT_PASSWORD", "123456")
+    auth_token_secret: str = env_value("AUTH_TOKEN_SECRET", "a5-local-dev-auth-secret")
+    auth_token_ttl_seconds: int = field(
+        default_factory=lambda: int(os.getenv("AUTH_TOKEN_TTL_SECONDS", "604800"))
+    )
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "source_package_path",
+            resolve_backend_relative_path(self.source_package_path),
+        )
+        object.__setattr__(
+            self,
+            "derived_knowledge_path",
+            resolve_backend_relative_path(self.derived_knowledge_path),
+        )
+        object.__setattr__(
+            self,
+            "tts_output_dir",
+            resolve_backend_relative_path(self.tts_output_dir),
+        )
 
 
 settings = Settings()

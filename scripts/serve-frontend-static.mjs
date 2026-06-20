@@ -7,6 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 const distRoot = path.join(projectRoot, 'frontend', 'dist');
 const port = Number.parseInt(process.env.FRONTEND_PORT ?? '5173', 10);
+const entry = process.env.FRONTEND_ENTRY ?? (port === 5174 ? 'admin' : 'visitor');
 
 const contentTypes = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -64,5 +65,5 @@ const server = createServer((request, response) => {
 });
 
 server.listen(port, '127.0.0.1', () => {
-  console.log(`Static frontend ready at http://127.0.0.1:${port}/`);
+  console.log(`Static ${entry} frontend ready at http://127.0.0.1:${port}/`);
 });

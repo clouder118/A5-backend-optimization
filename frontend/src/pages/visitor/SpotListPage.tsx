@@ -35,17 +35,21 @@ export default function SpotListPage() {
 
   return (
     <div className="page-stack">
-      <Typography.Title level={1} style={{ margin: 0 }}>
-        灵山胜境景点
-      </Typography.Title>
+      <div className="video-page-heading">
+        <Typography.Text className="mono-label">[ SCENIC ARCHIVE ]</Typography.Text>
+        <Typography.Title level={1} style={{ margin: 0 }}>
+          灵山胜境景点
+        </Typography.Title>
+        <Typography.Paragraph>山门、佛像、梵宫与拈花湾，在同一条静默动线上展开。</Typography.Paragraph>
+      </div>
 
       {spots.length === 0 ? (
         <EmptyState title="暂无景点" description="请先准备景区种子数据。" />
       ) : (
-        <Row gutter={[16, 16]}>
-          {spots.map((spot) => (
+        <Row className="spot-grid" gutter={[18, 18]}>
+          {spots.map((spot, index) => (
             <Col xs={24} sm={12} lg={8} key={spot.id}>
-              <SpotCard spot={spot} />
+              <SpotCard spot={spot} index={index + 1} />
             </Col>
           ))}
         </Row>

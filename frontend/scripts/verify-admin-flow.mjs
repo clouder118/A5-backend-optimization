@@ -5,17 +5,15 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
-const workspaceRoot = path.resolve(projectRoot, '..');
-const browserPath = path.join(workspaceRoot, '.cache', 'ms-playwright');
 const outputDir = path.join(projectRoot, 'test-results', 'admin-flow');
 const baseUrl = process.env.ADMIN_VERIFY_URL || 'http://127.0.0.1:5174';
 
 const routes = [
-  { path: '/admin/dashboard', title: '数据看板', waitText: '累计问答', shot: '01-admin-dashboard.png' },
-  { path: '/admin/spots', title: '景点管理', waitText: '远香堂', shot: '02-admin-spots.png' },
-  { path: '/admin/routes', title: '路线管理', waitText: '亲子轻松讲解线', shot: '03-admin-routes.png' },
-  { path: '/admin/knowledge', title: '知识库管理', waitText: 'LS-011-灵山大佛', shot: '04-admin-knowledge.png' },
-  { path: '/admin/logs', title: '问答日志', waitText: '远香堂有什么历史故事？', shot: '05-admin-logs.png' },
+  { path: '/dashboard', title: '数据看板', waitText: '累计问答', shot: '01-admin-dashboard.png' },
+  { path: '/spots', title: '景点管理', waitText: '远香堂', shot: '02-admin-spots.png' },
+  { path: '/routes', title: '路线管理', waitText: '亲子轻松讲解线', shot: '03-admin-routes.png' },
+  { path: '/knowledge', title: '知识库管理', waitText: 'LS-011-灵山大佛', shot: '04-admin-knowledge.png' },
+  { path: '/logs', title: '问答日志', waitText: '远香堂有什么历史故事？', shot: '05-admin-logs.png' },
 ];
 
 async function isServerReady() {
@@ -42,11 +40,10 @@ async function ensureServer() {
     return undefined;
   }
 
-  const child = spawn('npm.cmd run dev -- --port 5174', {
+  const child = spawn('npm.cmd run dev:admin -- --port 5174', {
     cwd: projectRoot,
     env: {
       ...process.env,
-      PLAYWRIGHT_BROWSERS_PATH: browserPath,
       VITE_USE_MOCK_API: 'true',
     },
     shell: true,
@@ -65,7 +62,6 @@ function failIf(condition, message) {
 }
 
 async function main() {
-  process.env.PLAYWRIGHT_BROWSERS_PATH = browserPath;
   const { chromium } = await import('@playwright/test');
   await mkdir(outputDir, { recursive: true });
 
@@ -82,8 +78,28 @@ async function main() {
   });
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
+  await page.route('**/api/auth/me', async (route) => {
+    const authorization = route.request().headers().authorization || '';
+    if (authorization === 'Bearer valid-admin-token') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 'admin-1', username: 'admin', role: 'admin' }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ message: '登录状态无效', code: 'AUTH_TOKEN_INVALID', status: 401 }),
+    });
+  });
+
   try {
     const checkedRoutes = [];
+
+    await page.goto(baseUrl, { waitUntil: 'networkidle' });
+    await page.evaluate(() => localStorage.setItem('a5_admin_token', 'valid-admin-token'));
 
     for (const route of routes) {
       await page.goto(`${baseUrl}${route.path}`, { waitUntil: 'networkidle' });
@@ -99,12 +115,12 @@ async function main() {
       checkedRoutes.push({ path: route.path, ok: true, screenshot: route.shot });
     }
 
-    await page.goto(`${baseUrl}/admin/knowledge`, { waitUntil: 'networkidle' });
+    await page.goto(`${baseUrl}/knowledge`, { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: /重建索引/ }).click();
     await page.getByText('索引重建结果').waitFor({ timeout: 5000 });
     await page.screenshot({ path: path.join(outputDir, '06-admin-knowledge-rebuild.png'), fullPage: true });
 
-    await page.goto(`${baseUrl}/admin/spots`, { waitUntil: 'networkidle' });
+    await page.goto(`${baseUrl}/spots`, { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: /新增景点/ }).click();
     await page.getByText('新增景点').last().waitFor({ timeout: 3000 });
     await page.screenshot({ path: path.join(outputDir, '07-admin-spot-modal.png'), fullPage: true });
@@ -117,7 +133,6 @@ async function main() {
         {
           ok: true,
           baseUrl,
-          browserPath,
           outputDir,
           checkedRoutes,
           knowledgeRebuild: 'ok',
