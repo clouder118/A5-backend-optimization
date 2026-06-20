@@ -19,6 +19,7 @@ backend/.pytest_cache/
 frontend/.env.local
 frontend/.vite-cache/
 frontend/node_modules/
+frontend/test-results/
 frontend/*.log
 frontend/*.err.log
 frontend/*.pid
