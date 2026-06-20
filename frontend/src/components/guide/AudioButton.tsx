@@ -6,6 +6,7 @@ export interface AudioButtonProps {
   text: string;
   audioUrl?: string;
   label?: string;
+  variant?: 'default' | 'minimal';
   loading?: boolean;
   disabled?: boolean;
   onStart?: () => void;
@@ -19,6 +20,7 @@ export default function AudioButton({
   text,
   audioUrl,
   label = '播放讲解',
+  variant = 'default',
   loading = false,
   disabled = false,
   onStart,
@@ -146,6 +148,24 @@ export default function AudioButton({
     };
     window.speechSynthesis.speak(utterance);
   };
+
+  if (variant === 'minimal') {
+    return (
+      <button
+        type="button"
+        className="message-play"
+        aria-label={isPlaying ? '停止讲解' : '播放讲解'}
+        title={isPlaying ? '停止讲解' : '播放讲解'}
+        disabled={loading || disabled || (!text.trim() && !audioUrl)}
+        onClick={speak}
+        data-playing={isPlaying}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M8 5.5 18 12 8 18.5Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+        </svg>
+      </button>
+    );
+  }
 
   return (
     <Button

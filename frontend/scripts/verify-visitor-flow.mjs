@@ -184,25 +184,91 @@ async function main() {
     }
 
     await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
+    await page.evaluate(() => {
+      Math.random = () => 0;
+    });
     await page.locator('a[href="/guide"]').first().click();
     await page.waitForURL('**/guide');
+    const workspace = page.getByTestId('ai-guide-workbench');
+    const chatWindow = page.getByTestId('guide-chat-window');
+    const quickPrompts = page.getByTestId('guide-quick-prompts');
+    await workspace.waitFor({ timeout: 5000 });
+    await chatWindow.waitFor({ timeout: 5000 });
+    failIf((await quickPrompts.getByRole('button').count()) !== 3, 'Guide page must render exactly three quick prompts');
+    failIf((await page.getByTestId('guide-chat-avatar').getAttribute('src')) !== '/avatar/haru-chat-avatar.jpeg', 'Guide chat avatar is not the supplied Haru image');
+    const [avatarBox, chatBox, promptsBox] = await Promise.all([
+      page.locator('.ai-guide-workbench__avatar').boundingBox(),
+      chatWindow.boundingBox(),
+      quickPrompts.boundingBox(),
+    ]);
+    if (!avatarBox || !chatBox || !promptsBox) throw new Error('Guide workspace columns are not measurable');
+    failIf(!(avatarBox.x < chatBox.x && chatBox.x < promptsBox.x), 'Guide workspace desktop columns are not ordered left-to-right');
+    const bareAvatar = await page.locator('.avatar-guide--bare .avatar-stage-shell').evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { backgroundColor: style.backgroundColor, borderTopWidth: style.borderTopWidth, boxShadow: style.boxShadow };
+    });
+    failIf(bareAvatar.backgroundColor !== 'rgba(0, 0, 0, 0)', 'Guide avatar still has a stage background');
+    failIf(bareAvatar.borderTopWidth !== '0px', 'Guide avatar still has a stage border');
+    failIf(
+      (await page.locator('.avatar-guide--bare .avatar-aura, .avatar-guide--bare .avatar-scan-ring, .avatar-guide--bare .avatar-light-dots, .avatar-guide--bare .avatar-speech-wave, .avatar-guide--bare .live2d-stage-hint').count()) !== 0,
+      'Guide bare avatar must contain only the digital human',
+    );
+    await page.getByTestId('guide-typing-message').waitFor({ timeout: 5000 });
+    await page.locator('.chat-bubble.assistant').first().waitFor({ timeout: 5000 });
+    failIf(
+      (await page.locator('.message-input').getAttribute('placeholder')) !== '……',
+      'Guide input does not use the source ellipsis placeholder',
+    );
+    failIf((await page.locator('.message-box > textarea.message-input').count()) !== 1, 'Guide input must use the source textarea structure');
+    const guideInputStyle = await page.locator('.message-input').evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { backgroundColor: style.backgroundColor, borderTopWidth: style.borderTopWidth, borderRadius: style.borderRadius };
+    });
+    failIf(guideInputStyle.backgroundColor !== 'rgba(0, 0, 0, 0)', 'Guide input must not have an independent background');
+    failIf(guideInputStyle.borderTopWidth !== '0px', 'Guide input must not have an independent border');
+    failIf(guideInputStyle.borderRadius !== '0px', 'Guide input must not have rounded input framing');
+    failIf((await page.getByTestId('guide-send').innerText()).trim() !== '', 'Guide send control must be icon-only');
+    failIf((await page.getByTestId('guide-voice-input').innerText()).trim() !== '', 'Guide voice control must be icon-only');
+
+    const beforePromptAnswerCount = await page.locator('.chat-bubble.assistant').count();
+    await page.getByTestId('guide-prompt-spot').click();
+    await page.locator('.chat-bubble.user').last().waitFor({ timeout: 5000 });
+    await page.getByTestId('guide-typing-message').waitFor({ timeout: 5000 });
+    await page.waitForFunction(
+      (count) => document.querySelectorAll('.chat-bubble.assistant').length > count,
+      beforePromptAnswerCount,
+      { timeout: 8000 },
+    );
+    const beforeManualAnswerCount = await page.locator('.chat-bubble.assistant').count();
     await page.locator('.chat-input-row textarea, .chat-input-row input').first().fill('远香堂有什么历史故事？');
-    await page.locator('.chat-input-row button.ant-btn-primary').click();
-    await page.locator('.source-card').first().waitFor({ timeout: 5000 });
+    await page.getByTestId('guide-send').click();
+    await page.getByTestId('guide-typing-message').waitFor({ timeout: 5000 });
+    await page.waitForFunction(
+      (count) => document.querySelectorAll('.chat-bubble.assistant').length > count,
+      beforeManualAnswerCount,
+      { timeout: 8000 },
+    );
+    await page.getByTestId('guide-source-toggle').last().click();
+    await page.locator('.source-card').first().waitFor({ timeout: 8000 });
     failIf((await page.locator('.chat-bubble.assistant').count()) < 2, 'AI guide answer was not rendered');
     failIf((await page.locator('.source-card').count()) < 1, 'AI guide source card was not rendered');
     await page.screenshot({ path: path.join(outputDir, '06-guide-chat-result-desktop.png'), fullPage: true });
 
     await page.locator('.chat-input-row textarea, .chat-input-row input').first().fill('模拟失败');
-    await page.locator('.chat-input-row button.ant-btn-primary').click();
-    await page.getByText('兜底回答').last().waitFor({ timeout: 5000 });
-    await page.getByText('AI 服务暂时不可用，已为你保留基础游览建议。').waitFor({ timeout: 5000 });
+    await page.getByTestId('guide-send').click();
+    await page.getByTestId('guide-typing-message').waitFor({ timeout: 5000 });
+    await page.getByText('AI 服务暂时不可用，已为你保留基础游览建议。').waitFor({ timeout: 8000 });
     await page.screenshot({ path: path.join(outputDir, '07-guide-fallback-desktop.png'), fullPage: true });
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${baseUrl}/`, { waitUntil: 'networkidle' });
     await page.screenshot({ path: path.join(outputDir, '08-home-mobile.png'), fullPage: true });
     await page.goto(`${baseUrl}/guide`, { waitUntil: 'networkidle' });
+    failIf(
+      await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth),
+      'Guide page has horizontal overflow on mobile',
+    );
+    failIf((await page.getByTestId('guide-quick-prompts').getByRole('button').count()) !== 3, 'Mobile guide lost quick prompts');
     await page.screenshot({ path: path.join(outputDir, '09-guide-mobile.png'), fullPage: true });
     await page.goto(`${baseUrl}/spots`, { waitUntil: 'networkidle' });
     await page.getByTestId('spot-reel').waitFor({ timeout: 5000 });

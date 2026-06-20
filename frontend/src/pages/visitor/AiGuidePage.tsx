@@ -1,18 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  CompassOutlined,
-  CustomerServiceOutlined,
-  EnvironmentOutlined,
-  ReadOutlined,
-} from '@ant-design/icons';
-import { Alert, Card, Space, Tag, Typography } from 'antd';
 import { useSearchParams } from 'react-router-dom';
+import { streamChatWithGuide } from '../../api/chat';
+import { getTtsJobStatus } from '../../api/tts';
 import AvatarGuide from '../../components/guide/AvatarGuide';
 import type { AvatarAudioState } from '../../components/guide/AvatarGuide';
 import ChatBox from '../../components/guide/ChatBox';
-import { initialGuideMessages } from '../../components/guide/welcomeMessage';
-import { streamChatWithGuide } from '../../api/chat';
-import { getTtsJobStatus } from '../../api/tts';
+import GuideQuickPrompts from '../../components/guide/GuideQuickPrompts';
+import type { GuideQuickPrompt } from '../../components/guide/GuideQuickPrompts';
+import { WELCOME_MESSAGE_AUDIO_URL, WELCOME_MESSAGE_TEXT } from '../../components/guide/welcomeMessage';
 import type { GuideEmotionCue } from '../../config/live2dGuide';
 import { productCopy } from '../../config/product';
 import type { ChatMessage, GuideStatus } from '../../types/scenic';
@@ -21,23 +16,26 @@ import {
   formatVisitorPreference,
   preferenceFromSearchParams,
   saveVisitorPreference,
-  visitorTypeLabels,
 } from '../../utils/visitorProfile';
+
+const INITIAL_MESSAGE_DELAY_MS = 100;
 
 function createMessageId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+function sourceDelay() {
+  return 1_000 + Math.random() * 2_000;
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 function audioStateFromTtsStatus(status?: ChatMessage['ttsStatus']): AvatarAudioState {
-  if (status === 'pending') {
-    return 'pending';
-  }
-  if (status === 'failed') {
-    return 'failed';
-  }
-  if (status === 'ready' || status === 'disabled') {
-    return 'ready';
-  }
+  if (status === 'pending') return 'pending';
+  if (status === 'failed') return 'failed';
+  if (status === 'ready' || status === 'disabled') return 'ready';
   return 'idle';
 }
 
@@ -46,13 +44,14 @@ export default function AiGuidePage() {
   const profileKey = searchParams.toString();
   const preference = useMemo(() => preferenceFromSearchParams(searchParams), [profileKey]);
   const preferenceText = useMemo(() => formatVisitorPreference(preference), [preference]);
-  const [messages, setMessages] = useState<ChatMessage[]>(initialGuideMessages);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [status, setStatus] = useState<GuideStatus>('idle');
   const [audioState, setAudioState] = useState<AvatarAudioState>('idle');
   const [emotionCue, setEmotionCue] = useState<GuideEmotionCue>('idle');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [chatError, setChatError] = useState('');
   const [sessionId, setSessionId] = useState(() => `guide-session-${Date.now()}`);
+  const [introReady, setIntroReady] = useState(false);
   const autoAskedRef = useRef(false);
 
   const spotId = searchParams.get('spotId') ?? undefined;
@@ -63,37 +62,55 @@ export default function AiGuidePage() {
     saveVisitorPreference(preference);
   }, [preference]);
 
-  const questionGroups = useMemo(
+  const quickPrompts = useMemo<GuideQuickPrompt[]>(
     () => [
       {
-        title: '景点讲解',
-        icon: <ReadOutlined />,
-        questions: [
-          spotName ? `请介绍一下${spotName}的主要看点。` : '灵山大佛有什么看点？',
-          '梵宫有什么特色？',
-        ],
+        id: 'spot',
+        category: '景点讲解',
+        question: spotName ? `请介绍一下${spotName}的主要看点。` : '灵山大佛有什么看点？',
       },
       {
-        title: '路线规划',
-        icon: <CompassOutlined />,
-        questions: [
-          buildPreferenceGuideQuestion(preference),
-          `按${visitorTypeLabels[preference.visitorType]}偏好推荐一条路线。`,
-        ],
+        id: 'route',
+        category: '路线规划',
+        question: buildPreferenceGuideQuestion(preference),
       },
       {
-        title: '服务信息',
-        icon: <CustomerServiceOutlined />,
-        questions: ['带老人来需要注意什么？', '如果想少走路，路线怎么安排？'],
-      },
-      {
-        title: '亲子与拍照',
-        icon: <EnvironmentOutlined />,
-        questions: ['带小朋友来适合先看哪里？', '哪里比较适合拍照？'],
+        id: 'service',
+        category: '服务信息',
+        question: '带老人来需要注意什么？',
       },
     ],
     [spotName, preference],
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      const typingId = createMessageId('assistant-typing');
+      setMessages([{ id: typingId, role: 'assistant', content: '', createdAt: Date.now() }]);
+      void wait(sourceDelay()).then(() => {
+        if (cancelled) return;
+        setMessages([
+          {
+            id: 'assistant-welcome',
+            role: 'assistant',
+            content: WELCOME_MESSAGE_TEXT,
+            audioUrl: WELCOME_MESSAGE_AUDIO_URL,
+            ttsStatus: 'ready',
+            createdAt: Date.now(),
+          },
+        ]);
+        setAudioState('ready');
+        setLoading(false);
+        setIntroReady(true);
+      });
+    }, INITIAL_MESSAGE_DELAY_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, []);
 
   const sendQuestion = async (question: string) => {
     setChatError('');
@@ -106,54 +123,30 @@ export default function AiGuidePage() {
       id: createMessageId('user'),
       role: 'user',
       content: question,
+      createdAt: Date.now(),
     };
-    const assistantMessageId = createMessageId('assistant');
-    const streamingAssistantMessage: ChatMessage = {
-      id: assistantMessageId,
-      role: 'assistant',
-      content: '',
-    };
+    const typingMessageId = createMessageId('assistant-typing');
+    const responsePromise = streamChatWithGuide({
+      question,
+      sessionId,
+      visitorType: preference.visitorType,
+      preference: preferenceText,
+      spotId,
+      currentSpotName: spotName ?? '灵山大佛',
+    });
 
-    setMessages((current) => [...current, userMessage, streamingAssistantMessage]);
+    setMessages((current) => [...current, userMessage]);
+    await wait(sourceDelay());
+    setMessages((current) => [
+      ...current,
+      { id: typingMessageId, role: 'assistant', content: '', createdAt: Date.now() },
+    ]);
 
-    let hasDelta = false;
-    const response = await streamChatWithGuide(
-      {
-        question,
-        sessionId,
-        visitorType: preference.visitorType,
-        preference: preferenceText,
-        spotId,
-        currentSpotName: spotName ?? '灵山大佛',
-      },
-      {
-        onDelta: (chunk) => {
-          hasDelta = true;
-          setLoading(false);
-          setStatus('thinking');
-          setEmotionCue('thinking');
-          setMessages((current) =>
-            current.map((message) =>
-              message.id === assistantMessageId
-                ? { ...message, content: `${message.content}${chunk}` }
-                : message,
-            ),
-          );
-        },
-      },
-    );
-
-    if (response.sessionId) {
-      setSessionId(response.sessionId);
-    }
-    if (!hasDelta) {
-      setLoading(false);
-    }
+    const [response] = await Promise.all([responsePromise, wait(sourceDelay())]);
+    if (response.sessionId) setSessionId(response.sessionId);
 
     if (response.isFallback) {
       setChatError('AI 服务暂时不可用，已为你保留基础游览建议。');
-    }
-    if (response.isFallback) {
       setEmotionCue('fallback');
     } else if (response.sources.length > 0) {
       setEmotionCue('success');
@@ -163,7 +156,7 @@ export default function AiGuidePage() {
     setAudioState(audioStateFromTtsStatus(response.ttsStatus));
 
     const assistantMessage: ChatMessage = {
-      id: assistantMessageId,
+      id: createMessageId('assistant'),
       role: 'assistant',
       content: response.answer,
       sources: response.sources,
@@ -172,19 +165,18 @@ export default function AiGuidePage() {
       ttsStatus: response.ttsStatus,
       isFallback: response.isFallback,
       metrics: response.metrics,
+      createdAt: Date.now(),
     };
 
     setMessages((current) =>
-      current.map((message) =>
-        message.id === assistantMessageId ? assistantMessage : message,
-      ),
+      current.map((message) => (message.id === typingMessageId ? assistantMessage : message)),
     );
     setStatus('idle');
+    setLoading(false);
     window.setTimeout(() => {
-      setEmotionCue((current) =>
-        current === 'success' || current === 'fallback' ? 'idle' : current,
-      );
+      setEmotionCue((current) => (current === 'success' || current === 'fallback' ? 'idle' : current));
     }, 1300);
+
     if (response.ttsJobId && response.ttsStatus === 'pending') {
       setAudioState('pending');
       void pollTtsJob(response.ttsJobId, assistantMessage.id);
@@ -192,32 +184,25 @@ export default function AiGuidePage() {
   };
 
   useEffect(() => {
-    if (!initialQuestion || autoAskedRef.current) {
-      return;
-    }
+    if (!initialQuestion || !introReady || autoAskedRef.current) return;
     autoAskedRef.current = true;
     void sendQuestion(initialQuestion);
-  }, [initialQuestion]);
+  }, [initialQuestion, introReady]);
 
   const pollTtsJob = async (jobId: string, messageId: string) => {
     for (let attempt = 0; attempt < 20; attempt += 1) {
-      await new Promise((resolve) => window.setTimeout(resolve, 1200));
+      await wait(1200);
       const ttsStatus = await getTtsJobStatus(jobId);
       if (ttsStatus.status === 'pending') {
         setAudioState('pending');
         continue;
       }
       setAudioState(audioStateFromTtsStatus(ttsStatus.status));
-      if (ttsStatus.status === 'failed') {
-        setEmotionCue('fallback');
-      } else if (ttsStatus.status === 'ready') {
-        setEmotionCue('success');
-      }
+      if (ttsStatus.status === 'failed') setEmotionCue('fallback');
+      if (ttsStatus.status === 'ready') setEmotionCue('success');
       setMessages((current) =>
         current.map((message) =>
-          message.id === messageId
-            ? { ...message, audioUrl: ttsStatus.audioUrl, ttsStatus: ttsStatus.status }
-            : message,
+          message.id === messageId ? { ...message, audioUrl: ttsStatus.audioUrl, ttsStatus: ttsStatus.status } : message,
         ),
       );
       return;
@@ -225,71 +210,35 @@ export default function AiGuidePage() {
   };
 
   const sendPresetQuestion = (question: string) => {
-    if (!loading) {
-      void sendQuestion(question);
-    }
+    if (!loading && introReady) void sendQuestion(question);
   };
 
   return (
-    <div className="page-stack ai-guide-page">
-      <Space className="video-page-heading" direction="vertical" size={6}>
-        <Typography.Text className="mono-label">[ AI GUIDE ]</Typography.Text>
-        <Typography.Title level={1} style={{ margin: 0 }}>
-          {productCopy.guideName}
-        </Typography.Title>
-      </Space>
-
-      {spotName ? (
-        <Alert
-          type="info"
-          showIcon
-          message={`当前咨询景点：${spotName}`}
-          description="AI 导游会优先结合该景点上下文组织回答；你也可以继续追问路线、亲子游和服务信息。"
-        />
-      ) : null}
-
-      <div className="chat-shell">
-        <Card className="guide-console">
+    <div className="ai-guide-page ai-guide-page--chat">
+      <div className="ai-guide-workbench" data-testid="ai-guide-workbench">
+        <aside className="ai-guide-workbench__avatar luxury-avatar-stage" aria-label="AI 数字人导游">
           <AvatarGuide
             status={status}
             variant="stage"
-            profileText={preferenceText}
+            presentation="bare"
+            showStatus={false}
             audioState={audioState}
             emotionCue={emotionCue}
             stageMode="guide"
-            title={loading ? '正在检索与组织回答' : undefined}
-            detail=""
           />
-          <div className="question-groups">
-            {questionGroups.map((group) => (
-              <div className="question-group" key={group.title}>
-                <Typography.Text strong>
-                  {group.icon} {group.title}
-                </Typography.Text>
-                <div className="meta-line">
-                  {group.questions.map((question) => (
-                    <Tag
-                      color="green"
-                      className="question-chip"
-                      key={question}
-                      onClick={() => sendPresetQuestion(question)}
-                      style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
-                      data-cue="[ ASK ]"
-                    >
-                      {question}
-                    </Tag>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+        </aside>
+
         <ChatBox
           messages={messages}
           loading={loading}
           error={chatError}
           enableSpeechInput
-          placeholder={`按${visitorTypeLabels[preference.visitorType]}偏好继续问 AI 导游`}
+          assistant={{
+            name: productCopy.guideName,
+            subtitle: '在线智能导览',
+            avatarSrc: '/avatar/haru-chat-avatar.jpeg',
+            avatarAlt: '灵山胜境 AI 导游头像',
+          }}
           onSend={(question) => void sendQuestion(question)}
           onSpeakStart={() => {
             setStatus('speaking');
@@ -308,6 +257,8 @@ export default function AiGuidePage() {
             console.warn('[AiGuidePage] audio playback failed:', message);
           }}
         />
+
+        <GuideQuickPrompts prompts={quickPrompts} disabled={loading || !introReady} onSelect={sendPresetQuestion} />
       </div>
     </div>
   );
