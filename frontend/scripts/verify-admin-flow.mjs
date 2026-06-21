@@ -107,6 +107,20 @@ async function main() {
       failIf(!body.includes(route.title), `Missing expected admin title on ${route.path}: ${route.title}`);
       failIf(await page.locator('.ant-table').count() < 1, `Missing admin table on ${route.path}`);
       await page.getByText(route.waitText).first().waitFor({ timeout: 5000 });
+      if (route.path === '/dashboard') {
+        await page.getByText('今日服务人次').waitFor({ timeout: 5000 });
+        await page.getByText('游客关注点分析').waitFor({ timeout: 5000 });
+        await page.getByText('热门问答聚类').waitFor({ timeout: 5000 });
+        await page.getByText('规则报告', { exact: true }).waitFor({ timeout: 5000 });
+        await page.getByText('近 7 天', { exact: true }).waitFor({ timeout: 5000 });
+        await page.getByText('近 7 天', { exact: true }).click();
+        await page.getByText('LLM 增强', { exact: true }).waitFor({ timeout: 5000 });
+        await page.getByText('近 30 天', { exact: true }).click();
+        await page.getByText('规则兜底').waitFor({ timeout: 5000 });
+        await page.getByText('今日', { exact: true }).click();
+        await page.getByText('暂无热门问答聚类').waitFor({ timeout: 5000 });
+        await page.getByText('null').first().waitFor({ timeout: 5000 });
+      }
       await page.waitForFunction(() => document.querySelectorAll('.ant-spin-blur, .ant-spin-spinning').length === 0, {
         timeout: 5000,
       });

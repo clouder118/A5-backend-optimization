@@ -24,6 +24,11 @@ from app.models import (
     WebFactCandidate,
 )
 from app.schemas import RouteUpsert, SpotDetail, SpotUpsert
+from app.services.operations import (
+    VALID_RANGES,
+    build_operations_overview,
+    build_visitor_insights_report,
+)
 
 router = APIRouter(
     prefix="/api/admin",
@@ -122,6 +127,25 @@ def get_admin_dashboard(request: Request, db: Session = Depends(get_db)) -> dict
         "recent_logs": recent_logs,
         "behavior_summary": _load_behavior_summary(active_settings.derived_knowledge_path),
     }
+
+
+@router.get("/operations/overview")
+def get_operations_overview(range: str = "week", db: Session = Depends(get_db)) -> dict:
+    if range not in VALID_RANGES:
+        raise ApiError("不支持的运营分析时间范围", "OPERATIONS_RANGE_INVALID", 400)
+    return build_operations_overview(db, range)
+
+
+@router.get("/visitor-insights/report")
+def get_visitor_insights_report(
+    request: Request,
+    range: str = "7d",
+    db: Session = Depends(get_db),
+) -> dict:
+    if range not in VALID_RANGES:
+        raise ApiError("不支持的游客感受度报告时间范围", "VISITOR_INSIGHTS_RANGE_INVALID", 400)
+    active_settings = getattr(request.app.state, "settings", settings)
+    return build_visitor_insights_report(db, range, active_settings)
 
 
 def _load_behavior_summary(derived_knowledge_path: str) -> dict:

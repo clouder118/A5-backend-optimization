@@ -95,7 +95,31 @@ cd frontend
 ../.tools/node/bin/npm run verify:admin
 ```
 
-## 7. Python 手动下载
+## 7. 管理端运营分析接口
+
+管理端数据看板已经集成运营分析能力，不新增单独页面。管理后台入口：
+
+```text
+http://127.0.0.1:5174/
+```
+
+新增后台接口：
+
+```text
+GET /api/admin/operations/overview?range=today|week|7d|30d
+GET /api/admin/visitor-insights/report?range=today|week|7d|30d
+```
+
+dashboard 展示内容包括运营 KPI、情感趋势、满意度趋势、游客关注点分析、服务建议、热门问答聚类和 LLM 状态。LLM 未配置、不可用或调用失败时，后端会降级返回本地规则报告，接口仍保持可用。
+
+管理端验证脚本使用 mock API 和 mock 管理员登录态，不依赖真实 MiMo 网络调用：
+
+```bash
+cd frontend
+../.tools/node/bin/npm run verify:admin
+```
+
+## 8. Python 手动下载
 
 如果 `bootstrap-macos.sh` 下载 Python 很慢，手动下载这个文件：
 
@@ -117,7 +141,7 @@ cd /Users/bebop/code/中软/A5--main
 ./scripts/bootstrap-macos.sh
 ```
 
-## 8. Windows 启动
+## 9. Windows 启动
 
 Windows 使用：
 
@@ -143,7 +167,7 @@ Windows 前端重新构建：
 BUILD-FRONTEND.bat
 ```
 
-## 9. 环境变量
+## 10. 环境变量
 
 本地后端配置文件：
 
