@@ -1,10 +1,13 @@
 from dataclasses import dataclass
 from datetime import date
+from html import unescape
 import json
 import re
 from typing import Protocol
 from urllib.error import URLError
 from urllib.request import Request, urlopen
+
+import httpx
 
 from app.core.config import Settings
 from app.schemas import KnowledgeSource
@@ -72,13 +75,16 @@ class MimoWebSearchProvider:
 
         client = MimoClient(self.settings.llm_base_url, self.settings.llm_api_key)
         today = date.today().strftime("%Y年%m月%d日")
-        response = client.web_search_completion(
-            model=self.settings.llm_model,
-            system_prompt=_mimo_search_system_prompt(),
-            user_prompt=f"今天是{today}。请联网搜索并提取可核验来源来回答这个实时或公共信息问题：{query}",
-            max_results=self.settings.web_search_max_results,
-            timeout_seconds=timeout_seconds,
-        )
+        try:
+            response = client.web_search_completion(
+                model=self.settings.llm_model,
+                system_prompt=_mimo_search_system_prompt(),
+                user_prompt=f"今天是{today}。请联网搜索并提取可核验来源来回答这个实时或公共信息问题：{query}",
+                max_results=self.settings.web_search_max_results,
+                timeout_seconds=timeout_seconds,
+            )
+        except httpx.TimeoutException as exc:
+            raise WebSearchTimeout("web search timed out") from exc
         return _mimo_response_to_results(response)
 
 
@@ -91,6 +97,12 @@ def get_web_search_provider(settings: Settings) -> WebSearchProvider:
             settings.web_search_api_key,
         )
     return DisabledWebSearchProvider()
+
+
+def direct_weather_search(query: str, timeout_seconds: float) -> list[WebSearchResult]:
+    if not _is_wuxi_weather_query(query):
+        return []
+    return _china_weather_results(timeout_seconds)
 
 
 def web_results_to_contexts(
@@ -251,6 +263,93 @@ def _known_source_results_from_content(content: str) -> list[WebSearchResult]:
             )
         )
     return results
+
+
+def _is_wuxi_weather_query(query: str) -> bool:
+    if "天气" not in query and "气温" not in query:
+        return False
+    if any(city in query for city in ["北京", "上海", "南京", "苏州", "杭州", "成都", "广州", "深圳"]):
+        return False
+    return any(term in query for term in ["无锡", "灵山", "景区", "今天", "现在"])
+
+
+def _china_weather_results(timeout_seconds: float) -> list[WebSearchResult]:
+    url = "https://www.weather.com.cn/weather/101190201.shtml"
+    request = Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        with urlopen(request, timeout=timeout_seconds) as response:
+            content = response.read().decode("utf-8", errors="ignore")
+    except TimeoutError as exc:
+        raise WebSearchTimeout("weather page timed out") from exc
+    except URLError as exc:
+        if isinstance(exc.reason, TimeoutError):
+            raise WebSearchTimeout("weather page timed out") from exc
+        return []
+
+    snippet = _china_weather_snippet(content)
+    if not snippet:
+        return []
+    return [
+        WebSearchResult(
+            title="中国天气网无锡天气预报",
+            snippet=snippet,
+            url=url,
+            source_level="authoritative",
+        )
+    ]
+
+
+def _china_weather_snippet(content: str) -> str:
+    hidden_title = _html_attr_value(content, "hidden_title")
+    update_time = _html_attr_value(content, "update_time")
+    block_match = re.search(r'<li class="sky skyid[^"]* on">(.*?)</li>', content, re.S)
+    block = block_match.group(1) if block_match else ""
+    day = _tag_text(block, "h1")
+    weather = _class_text(block, "wea")
+    temperature = _class_text(block, "tem")
+    wind = _class_text(block, "win")
+
+    parts = []
+    if hidden_title:
+        parts.append(hidden_title)
+    details = "，".join(item for item in [day, weather, temperature, wind] if item)
+    if details:
+        parts.append(details)
+    if update_time:
+        parts.append(f"页面更新时间：{update_time}")
+    if not parts:
+        return ""
+    return "中国天气网无锡天气：" + "；".join(parts) + "。请以中国天气网页面实时更新为准。"
+
+
+def _html_attr_value(content: str, element_id: str) -> str:
+    match = re.search(
+        rf'id="{re.escape(element_id)}"[^>]*value="([^"]*)"',
+        content,
+        re.S,
+    )
+    return _clean_html_text(match.group(1)) if match else ""
+
+
+def _tag_text(content: str, tag: str) -> str:
+    match = re.search(rf"<{tag}[^>]*>(.*?)</{tag}>", content, re.S)
+    return _clean_html_text(match.group(1)) if match else ""
+
+
+def _class_text(content: str, class_name: str) -> str:
+    match = re.search(
+        rf'<(?P<tag>[a-zA-Z0-9]+)[^>]*class="{re.escape(class_name)}"[^>]*>(.*?)</(?P=tag)>',
+        content,
+        re.S,
+    )
+    return _clean_html_text(match.group(2)) if match else ""
+
+
+def _clean_html_text(content: str) -> str:
+    text = re.sub(r"<[^>]+>", " ", content)
+    text = unescape(text)
+    text = " ".join(text.split())
+    return text
 
 
 def _source_level_for_url(url: str, title: str, site_name: str) -> str:

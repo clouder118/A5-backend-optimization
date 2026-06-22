@@ -17,12 +17,15 @@ FACT_KEYWORDS = {
     "visit_minutes": ["逛多久", "游览多久", "停留多久", "需要多久"],
     "suitability": ["适合", "能不能", "可不可以"],
 }
+ALLOWED_FACT_KEYS = set(FACT_KEYWORDS)
 
 ROUTE_WORDS = ["路线", "怎么逛", "几个小时", "两个小时", "多久逛", "带老人", "带小朋友"]
 SERVICE_WORDS = ["厕所", "洗手间", "停车", "餐饮", "游客中心", "出口", "无障碍"]
 HIGH_RISK_REALTIME_WORDS = ["今天", "现在", "变了吗", "开放时间", "票价", "门票", "安全", "天气"]
 EXPLANATION_WORDS = ["有什么", "特色", "故事", "讲解", "介绍", "看点"]
 EXTERNAL_FACT_WORDS = ["官方", "售价", "价格", "多少钱", "参数", "配置", "型号", "上市", "发布"]
+PHOTO_RECOMMENDATION_WORDS = ["拍照", "摄影", "打卡", "取景"]
+RECOMMENDATION_WORDS = ["哪里", "推荐", "适合", "怎么拍", "去哪"]
 ALLOWED_INTENTS = {
     "scenic_fact",
     "scenic_explanation",
@@ -116,6 +119,10 @@ def _intent(question: str, entities: list[dict], fact_keys: list[str]) -> str:
         return "scenic_fact"
     if entities and any(word in question for word in EXPLANATION_WORDS):
         return "scenic_explanation"
+    if any(word in question for word in PHOTO_RECOMMENDATION_WORDS) and any(
+        word in question for word in RECOMMENDATION_WORDS
+    ):
+        return "route"
     if any(word in question for word in ROUTE_WORDS):
         return "route"
     if any(word in question for word in SERVICE_WORDS):
@@ -167,7 +174,11 @@ def _llm_classify(settings: Settings, question: str) -> dict | None:
     if intent not in ALLOWED_INTENTS:
         intent = "unknown"
     entities = [item for item in payload.get("entities", []) if isinstance(item, dict)]
-    fact_keys = [str(item) for item in payload.get("fact_keys", []) if isinstance(item, str)]
+    fact_keys = [
+        str(item)
+        for item in payload.get("fact_keys", [])
+        if isinstance(item, str) and str(item) in ALLOWED_FACT_KEYS
+    ]
 
     return {
         "intent": intent,

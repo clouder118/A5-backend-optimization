@@ -3,6 +3,7 @@ import json
 import sqlite3
 
 from fastapi.testclient import TestClient
+import httpx
 
 from app.core.config import Settings
 from app.main import create_app
@@ -176,6 +177,41 @@ def test_chat_uses_structured_tags_for_suitability_questions(tmp_path):
     assert "佛教文化" in body["sources"][0]["snippet"]
 
 
+def test_photo_recommendation_uses_local_scenic_context_without_web(tmp_path, monkeypatch):
+    class FailingWebSearchProvider:
+        def search(self, query, timeout_seconds):
+            raise AssertionError("photo recommendation should not use web search")
+
+    monkeypatch.setattr(
+        "app.services.chat.get_web_search_provider",
+        lambda settings: FailingWebSearchProvider(),
+    )
+    db_path = tmp_path / "app.db"
+    app = create_app(
+        Settings(
+            database_url=f"sqlite:///{db_path}",
+            source_package_path=str(SOURCE_PACKAGE_PATH),
+            web_search_mode="provider",
+            llm_api_key="fake-key",
+            tts_mode="disabled",
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/api/chat", json={"question": "哪里比较适合拍照？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["metrics"]["classification"]["intent"] == "route"
+    assert body["metrics"]["web_supplement_required"] is False
+    assert body["metrics"]["web_supplement_status"] == "not_required"
+    assert body["sources"]
+    assert any(
+        "拍照" in source["snippet"] or "摄影" in source["snippet"]
+        for source in body["sources"]
+    )
+
+
 def test_chat_reports_question_intent_categories(tmp_path):
     cases = [
         ("带老人两个小时怎么逛？", "route"),
@@ -263,6 +299,58 @@ def test_unknown_question_can_use_mimo_for_structured_classification(tmp_path, m
         "base_url": "https://api.xiaomimimo.com/v1",
         "model": "mimo-v2.5",
     }
+
+
+def test_llm_classifier_drops_unknown_fact_keys_before_web_supplement(tmp_path, monkeypatch):
+    def fake_chat_completion(self, model, system_prompt, user_prompt):
+        if "问题分类器" in system_prompt:
+            return json.dumps(
+                {
+                    "intent": "scenic_fact",
+                    "entities": [],
+                    "fact_keys": ["photography_suitability", "scenic_viewpoints"],
+                    "tags": ["photography"],
+                    "emotional": False,
+                    "confidence": 0.85,
+                },
+                ensure_ascii=False,
+            )
+        return "这里适合结合现场景观和动线安排拍照。"
+
+    class FailingWebSearchProvider:
+        def search(self, query, timeout_seconds):
+            raise AssertionError("unknown classifier fact keys should not trigger web search")
+
+    monkeypatch.setattr(
+        "app.services.question_classifier.MimoClient.chat_completion",
+        fake_chat_completion,
+    )
+    monkeypatch.setattr(
+        "app.services.chat.MimoClient.chat_completion",
+        fake_chat_completion,
+    )
+    monkeypatch.setattr(
+        "app.services.chat.get_web_search_provider",
+        lambda settings: FailingWebSearchProvider(),
+    )
+    db_path = tmp_path / "app.db"
+    app = create_app(
+        Settings(
+            database_url=f"sqlite:///{db_path}",
+            source_package_path=str(SOURCE_PACKAGE_PATH),
+            web_search_mode="provider",
+            llm_api_key="fake-key",
+            tts_mode="disabled",
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/api/chat", json={"question": "这个地方有什么取景建议？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["metrics"]["classification"]["fact_keys"] == []
+    assert body["metrics"]["web_supplement_required"] is False
 
 
 def test_llm_synthesis_prompt_separates_evidence_and_source_rules(tmp_path, monkeypatch):
@@ -479,6 +567,10 @@ def test_mimo_web_search_provider_uses_existing_llm_settings(tmp_path, monkeypat
         "app.services.web_search.MimoClient.web_search_completion",
         fake_web_search_completion,
     )
+    monkeypatch.setattr(
+        "app.services.chat.direct_weather_search",
+        lambda query, timeout_seconds: [],
+    )
     db_path = tmp_path / "app.db"
     app = create_app(
         Settings(
@@ -538,6 +630,10 @@ def test_mimo_web_search_provider_accepts_nested_url_citation(tmp_path, monkeypa
         "app.services.web_search.MimoClient.web_search_completion",
         fake_web_search_completion,
     )
+    monkeypatch.setattr(
+        "app.services.chat.direct_weather_search",
+        lambda query, timeout_seconds: [],
+    )
     db_path = tmp_path / "app.db"
     app = create_app(
         Settings(
@@ -580,6 +676,10 @@ def test_mimo_web_search_provider_accepts_content_url_when_annotations_missing(t
         "app.services.web_search.MimoClient.web_search_completion",
         fake_web_search_completion,
     )
+    monkeypatch.setattr(
+        "app.services.chat.direct_weather_search",
+        lambda query, timeout_seconds: [],
+    )
     db_path = tmp_path / "app.db"
     app = create_app(
         Settings(
@@ -621,6 +721,10 @@ def test_mimo_weather_search_maps_named_sources_when_urls_missing(tmp_path, monk
     monkeypatch.setattr(
         "app.services.web_search.MimoClient.web_search_completion",
         fake_web_search_completion,
+    )
+    monkeypatch.setattr(
+        "app.services.chat.direct_weather_search",
+        lambda query, timeout_seconds: [],
     )
     db_path = tmp_path / "app.db"
     app = create_app(
@@ -988,6 +1092,96 @@ def test_realtime_web_search_timeout_fails_gracefully(tmp_path, monkeypatch):
     assert body["metrics"]["web_supplement_status"] == "timeout"
     assert all(source["source_type"] != "realtime_web" for source in body["sources"])
     assert "联网补充" in body["answer"]
+
+
+def test_stream_mimo_read_timeout_is_reported_as_search_timeout(tmp_path, monkeypatch):
+    def timeout_web_search_completion(
+        self,
+        model,
+        system_prompt,
+        user_prompt,
+        max_results,
+        timeout_seconds,
+    ):
+        raise httpx.ReadTimeout("slow mimo web search")
+
+    monkeypatch.setattr(
+        "app.services.web_search.MimoClient.web_search_completion",
+        timeout_web_search_completion,
+    )
+    monkeypatch.setattr(
+        "app.services.chat.direct_weather_search",
+        lambda query, timeout_seconds: [],
+    )
+    db_path = tmp_path / "app.db"
+    app = create_app(
+        Settings(
+            database_url=f"sqlite:///{db_path}",
+            source_package_path=str(SOURCE_PACKAGE_PATH),
+            web_search_mode="mimo",
+            llm_api_key="fake-key",
+            tts_mode="disabled",
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/api/chat/stream", json={"question": "今天无锡天气如何？"})
+
+    assert response.status_code == 200
+    final = next(event["data"] for event in _sse_events(response.text) if event["event"] == "final")
+    assert final["metrics"]["web_supplement_status"] == "timeout"
+    assert "联网搜索超时" in final["answer"]
+    assert "调用失败" not in final["answer"]
+    assert final["sources"] == []
+
+
+def test_mimo_weather_uses_direct_authoritative_weather_before_llm_web(tmp_path, monkeypatch):
+    def fail_web_search_completion(
+        self,
+        model,
+        system_prompt,
+        user_prompt,
+        max_results,
+        timeout_seconds,
+    ):
+        raise AssertionError("direct weather lookup should run before MiMo web search")
+
+    monkeypatch.setattr(
+        "app.services.web_search.MimoClient.web_search_completion",
+        fail_web_search_completion,
+    )
+    monkeypatch.setattr(
+        "app.services.chat.direct_weather_search",
+        lambda query, timeout_seconds: [
+            {
+                "title": "中国天气网无锡天气预报",
+                "snippet": "中国天气网无锡天气：06月21日20时 无锡 阴 21/23°C。请以中国天气网页面实时更新为准。",
+                "url": "https://www.weather.com.cn/weather/101190201.shtml",
+                "source_level": "authoritative",
+            }
+        ],
+    )
+    db_path = tmp_path / "app.db"
+    app = create_app(
+        Settings(
+            database_url=f"sqlite:///{db_path}",
+            source_package_path=str(SOURCE_PACKAGE_PATH),
+            web_search_mode="mimo",
+            llm_api_key="fake-key",
+            tts_mode="disabled",
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/api/chat", json={"question": "今天灵山景区的天气如何"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["metrics"]["web_supplement_status"] == "success"
+    assert body["sources"][0]["source_type"] == "realtime_web"
+    assert body["sources"][0]["source_url"] == "https://www.weather.com.cn/weather/101190201.shtml"
+    assert all(source["source_type"] == "realtime_web" for source in body["sources"])
+    assert "联网搜索超时" not in body["answer"]
 
 
 def test_low_trust_source_is_ignored_for_high_risk_fact(tmp_path, monkeypatch):

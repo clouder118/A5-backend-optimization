@@ -12,7 +12,6 @@ import { useVisitorAuth } from '../../utils/visitorAuthContext';
 
 type HeroTuning = {
   titleLines?: string[];
-  englishText?: string;
   fontSize?: number;
   lineHeight?: number;
   titleX?: number;
@@ -26,9 +25,6 @@ type HeroTuning = {
   overlayOpacity?: number;
   titleWidth?: number;
   titleColor?: string;
-  englishFontSize?: number;
-  englishX?: number;
-  englishY?: number;
 };
 
 type HeroScene = {
@@ -52,8 +48,7 @@ const heroScenes = [
     image: '/scenic/spots/photos/NH-001_拈花广场/1.jpg',
     tone: 'jade',
     tuning: {
-      titleLines: ['  靈山', '勝     景'],
-      englishText: 'Sacred Mountain\n Scenic Spot',
+      titleLines: ['灵山胜境'],
       fontSize: 110,
       lineHeight: 0.9,
       titleX: 43,
@@ -67,9 +62,6 @@ const heroScenes = [
       overlayOpacity: 0,
       titleWidth: 58,
       titleColor: '#c7f0d3',
-      englishFontSize: 18,
-      englishX: 27,
-      englishY: 50,
     },
   },
   {
@@ -112,9 +104,6 @@ function getHeroStyle(tuning?: HeroTuning): CSSProperties | undefined {
     '--hero-contrast': tuning.contrast !== undefined ? `${tuning.contrast}%` : undefined,
     '--hero-saturation': tuning.saturation !== undefined ? `${tuning.saturation}%` : undefined,
     '--hero-overlay-opacity': tuning.overlayOpacity,
-    '--hero-english-size': tuning.englishFontSize ? `${tuning.englishFontSize}px` : undefined,
-    '--hero-english-x': tuning.englishX !== undefined ? `${tuning.englishX}%` : undefined,
-    '--hero-english-y': tuning.englishY !== undefined ? `${tuning.englishY}%` : undefined,
   } as CSSProperties;
 }
 
@@ -272,11 +261,6 @@ export default function HomePage() {
                   {scene.subtitleEn ? <span className="luxury-hero-subtitle-en">{scene.subtitleEn}</span> : null}
                 </Typography.Paragraph>
               </div>
-              {scene.tuning?.englishText ? (
-                <div className="luxury-title-en" aria-hidden="true">
-                  {scene.tuning.englishText}
-                </div>
-              ) : null}
               <div className="luxury-scene-meta">
                 <span>{String(index + 1).padStart(2, '0')}</span>
                 <i />

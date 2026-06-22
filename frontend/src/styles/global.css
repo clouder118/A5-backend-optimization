@@ -1713,7 +1713,7 @@ a {
 
 .luxury-hero-title-line {
   display: block;
-  white-space: pre;
+  white-space: nowrap;
 }
 
 .luxury-hero-subtitle.ant-typography {
@@ -1731,22 +1731,6 @@ a {
   letter-spacing: 0.8px;
   text-transform: uppercase;
   opacity: 0.72;
-}
-
-.luxury-title-en {
-  position: absolute;
-  top: var(--hero-english-y);
-  left: var(--hero-english-x);
-  z-index: 7;
-  color: var(--hero-title-color);
-  font-family: var(--en-font, "Bodoni 72", "Didot", Georgia, serif);
-  font-size: var(--hero-english-size);
-  font-weight: 700;
-  line-height: 1.06;
-  text-align: center;
-  text-shadow: 0 16px 42px rgba(0, 0, 0, 0.4);
-  white-space: pre-line;
-  transform: translate(-50%, -50%);
 }
 
 .luxury-scene-meta {
@@ -3265,12 +3249,6 @@ body::selection {
     max-width: 100%;
   }
 
-  .luxury-title-en {
-    top: calc(var(--hero-title-y) + 13%);
-    left: 50%;
-    font-size: min(var(--hero-english-size), 18px);
-  }
-
   .video-scroll-hint {
     bottom: 34px;
   }
@@ -3297,6 +3275,22 @@ body::selection {
 
   .admin-content {
     width: min(100% - 24px, 1240px);
+  }
+}
+
+@media (max-width: 640px) and (max-height: 480px) {
+  .luxury-scene-copy {
+    top: 50%;
+  }
+
+  .luxury-hero-title.ant-typography {
+    font-size: clamp(40px, 11vw, 54px);
+    line-height: 0.94;
+  }
+
+  .luxury-hero-subtitle.ant-typography {
+    font-size: 15px;
+    line-height: 1.62;
   }
 }
 

@@ -15,6 +15,7 @@ from app.services.tts import synthesize_answer_audio
 from app.services.tts_jobs import TtsJobStore
 from app.services.web_search import (
     WebSearchTimeout,
+    direct_weather_search,
     get_web_search_provider,
     web_results_to_contexts,
 )
@@ -60,7 +61,12 @@ def answer_chat(
         web_supplement_required,
     )
     contexts = web_contexts + contexts
-    sources = [context.source for context in contexts]
+    sources = _visible_sources(
+        contexts,
+        classification,
+        web_supplement_required,
+        web_supplement_status,
+    )
     llm_started = perf_counter()
     answer, mode, degraded = _answer_text(
         settings,
@@ -142,7 +148,12 @@ def stream_chat_events(
         web_supplement_required,
     )
     contexts = web_contexts + contexts
-    sources = [context.source for context in contexts]
+    sources = _visible_sources(
+        contexts,
+        classification,
+        web_supplement_required,
+        web_supplement_status,
+    )
 
     llm_started = perf_counter()
     answer_parts: list[str] = []
@@ -509,6 +520,28 @@ def _has_realtime_web_context(contexts) -> bool:
     return any(context.source.source_type == "realtime_web" for context in contexts)
 
 
+def _visible_sources(
+    contexts,
+    classification: dict,
+    web_supplement_required: bool,
+    web_supplement_status: str,
+):
+    realtime_sources = [
+        context.source
+        for context in contexts
+        if context.source.source_type == "realtime_web"
+    ]
+    if _is_external_realtime_question(classification) and realtime_sources:
+        return realtime_sources
+    if (
+        web_supplement_required
+        and web_supplement_status != "success"
+        and _is_external_realtime_question(classification)
+    ):
+        return realtime_sources
+    return [context.source for context in contexts]
+
+
 def _web_supplement_contexts(
     settings: Settings,
     question: str,
@@ -520,8 +553,19 @@ def _web_supplement_contexts(
     if settings.web_search_mode == "disabled":
         return [], "disabled"
 
+    direct_status = "not_required"
+    if settings.web_search_mode == "mimo":
+        direct_contexts, direct_status = _direct_web_supplement_contexts(
+            question,
+            classification,
+            settings.web_search_timeout_seconds,
+            settings.web_search_max_results,
+        )
+        if direct_contexts:
+            return direct_contexts, "success"
+
     provider = get_web_search_provider(settings)
-    saw_timeout = False
+    saw_timeout = direct_status == "timeout"
     saw_failure = False
     saw_untrusted_results = False
     for search_query in _web_search_queries(question, classification):
@@ -549,6 +593,26 @@ def _web_supplement_contexts(
         return [], "failed"
     if saw_timeout:
         return [], "timeout"
+    return [], "no_trusted_results"
+
+
+def _direct_web_supplement_contexts(
+    question: str,
+    classification: dict,
+    timeout_seconds: float,
+    max_results: int,
+):
+    if "weather" not in set(classification.get("fact_keys", [])):
+        return [], "not_required"
+    try:
+        results = direct_weather_search(question, timeout_seconds)
+    except (TimeoutError, WebSearchTimeout):
+        return [], "timeout"
+    except Exception:
+        return [], "failed"
+    contexts = web_results_to_contexts(results, classification, max_results)
+    if contexts:
+        return contexts, "success"
     return [], "no_trusted_results"
 
 
