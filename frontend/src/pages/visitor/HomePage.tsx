@@ -38,31 +38,14 @@ type HeroScene = {
   tuning?: HeroTuning;
 };
 
-const heroScenes = [
+const heroScenes: HeroScene[] = [
   {
     key: 'buddha',
-    eyebrow: '',
-    title: '灵山胜境导览',
+    eyebrow: 'Ling Shan Scenic Area',
+    title: '靈山勝境',
     subtitle: '以数字人导游陪你看见山水、佛韵与游线之间的秩序。',
-    subtitleEn: 'Your AI guide is all you need.',
     image: '/scenic/spots/photos/NH-001_拈花广场/1.jpg',
     tone: 'jade',
-    tuning: {
-      titleLines: ['灵山胜境'],
-      fontSize: 110,
-      lineHeight: 0.9,
-      titleX: 43,
-      titleY: 50,
-      imageScale: 1,
-      imageX: 60,
-      imageY: 70,
-      brightness: 130,
-      contrast: 116,
-      saturation: 101,
-      overlayOpacity: 0,
-      titleWidth: 58,
-      titleColor: '#c7f0d3',
-    },
   },
   {
     key: 'palace',
@@ -80,7 +63,7 @@ const heroScenes = [
     image: '/scenic/spots/photos/NH-004_拈花堂/2.jpg',
     tone: 'water',
   },
-] satisfies HeroScene[];
+];
 
 function getHeroStyle(tuning?: HeroTuning): CSSProperties | undefined {
   if (!tuning) {
