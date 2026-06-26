@@ -8,6 +8,8 @@ from app.services.mimo import MimoClient
 
 
 def test_settings_use_mimo_api_key_alias_and_model_defaults(monkeypatch):
+    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    monkeypatch.delenv("TTS_API_KEY", raising=False)
     monkeypatch.delenv("LLM_MODEL", raising=False)
     monkeypatch.delenv("TTS_MODEL", raising=False)
     monkeypatch.delenv("TTS_AUDIO_FORMAT", raising=False)

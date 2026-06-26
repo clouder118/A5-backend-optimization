@@ -33,6 +33,15 @@ def create_test_client(tmp_path, **overrides):
     return TestClient(create_app(settings))
 
 
+def admin_headers(client):
+    response = client.post(
+        "/api/auth/admin/login",
+        json={"username": "admin", "password": "123456"},
+    )
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['token']}"}
+
+
 def test_admin_spot_crud_happy_path(tmp_path):
     spot_payload = {
         "id": "spot_demo_gate",
@@ -46,13 +55,15 @@ def test_admin_spot_crud_happy_path(tmp_path):
         "sort_order": 5,
     }
     with create_test_client(tmp_path) as client:
-        created = client.post("/api/admin/spots", json=spot_payload)
+        headers = admin_headers(client)
+        created = client.post("/api/admin/spots", json=spot_payload, headers=headers)
         updated = client.put(
             "/api/admin/spots/spot_demo_gate",
             json={**spot_payload, "summary": "更新后的游客服务入口。"},
+            headers=headers,
         )
         visible = client.get("/api/spots/spot_demo_gate")
-        deleted = client.delete("/api/admin/spots/spot_demo_gate")
+        deleted = client.delete("/api/admin/spots/spot_demo_gate", headers=headers)
         missing = client.get("/api/spots/spot_demo_gate")
 
     assert created.status_code == 200
@@ -89,10 +100,12 @@ def test_admin_route_crud_happy_path(tmp_path):
         ],
     }
     with create_test_client(tmp_path) as client:
-        created = client.post("/api/admin/routes", json=route_payload)
+        headers = admin_headers(client)
+        created = client.post("/api/admin/routes", json=route_payload, headers=headers)
         updated = client.put(
             "/api/admin/routes/route_family_demo",
             json={**route_payload, "description": "更新后的亲子路线。"},
+            headers=headers,
         )
         recommended = client.post(
             "/api/routes/recommend",
@@ -103,23 +116,25 @@ def test_admin_route_crud_happy_path(tmp_path):
                 "interest_tags": ["亲子"],
             },
         )
-        deleted = client.delete("/api/admin/routes/route_family_demo")
+        deleted = client.delete("/api/admin/routes/route_family_demo", headers=headers)
 
     assert created.status_code == 200
     assert created.json()["name"] == "亲子轻松路线"
     assert updated.status_code == 200
     assert updated.json()["description"] == "更新后的亲子路线。"
     assert recommended.status_code == 200
-    assert recommended.json()["items"][0]["id"] == "route_family_demo"
+    assert recommended.json()["items"][0]["generation_mode"] == "dynamic"
+    assert recommended.json()["items"][0]["map_id"] == "ling-shan"
     assert deleted.status_code == 200
     assert deleted.json() == {"status": "deleted"}
 
 
 def test_knowledge_docs_and_rebuild_status(tmp_path):
     with create_test_client(tmp_path) as client:
-        before = client.get("/api/knowledge/docs")
-        rebuild = client.post("/api/knowledge/rebuild")
-        after = client.get("/api/knowledge/docs")
+        headers = admin_headers(client)
+        before = client.get("/api/knowledge/docs", headers=headers)
+        rebuild = client.post("/api/knowledge/rebuild", headers=headers)
+        after = client.get("/api/knowledge/docs", headers=headers)
 
     assert before.status_code == 200
     before_body = before.json()
@@ -146,7 +161,7 @@ def test_chat_logs_are_readable(tmp_path):
                 "spot_id": "spot_ling_shan_buddha",
             },
         )
-        logs = client.get("/api/logs/chats")
+        logs = client.get("/api/logs/chats", headers=admin_headers(client))
 
     assert chat.status_code == 200
     assert logs.status_code == 200
@@ -171,15 +186,17 @@ def test_admin_can_delete_chat_logs(tmp_path):
             response = client.post("/api/chat", json={"question": question})
             assert response.status_code == 200
 
-        before = client.get("/api/logs/chats").json()["items"]
-        deleted_one = client.delete(f"/api/logs/chats/{before[0]['id']}")
-        after_one = client.get("/api/logs/chats").json()
+        headers = admin_headers(client)
+        before = client.get("/api/logs/chats", headers=headers).json()["items"]
+        deleted_one = client.delete(f"/api/logs/chats/{before[0]['id']}", headers=headers)
+        after_one = client.get("/api/logs/chats", headers=headers).json()
         remaining_ids = [item["id"] for item in after_one["items"]]
         deleted_many = client.post(
             "/api/logs/chats/delete",
             json={"ids": remaining_ids},
+            headers=headers,
         )
-        after_many = client.get("/api/logs/chats").json()
+        after_many = client.get("/api/logs/chats", headers=headers).json()
 
     assert deleted_one.status_code == 200
     assert deleted_one.json() == {"status": "deleted", "deleted_count": 1}
@@ -196,8 +213,9 @@ def test_admin_can_clear_all_chat_logs(tmp_path):
             response = client.post("/api/chat", json={"question": question})
             assert response.status_code == 200
 
-        deleted = client.post("/api/logs/chats/delete", json={"delete_all": True})
-        after = client.get("/api/logs/chats").json()
+        headers = admin_headers(client)
+        deleted = client.post("/api/logs/chats/delete", json={"delete_all": True}, headers=headers)
+        after = client.get("/api/logs/chats", headers=headers).json()
 
     assert deleted.status_code == 200
     assert deleted.json() == {"status": "deleted", "deleted_count": 2}
@@ -228,7 +246,7 @@ def test_realtime_web_answer_creates_pending_fact_candidate(tmp_path, monkeypatc
         tts_mode="disabled",
     ) as client:
         chat = client.post("/api/chat", json={"question": "梵宫门票多少钱？"})
-        candidates = client.get("/api/admin/web-fact-candidates")
+        candidates = client.get("/api/admin/web-fact-candidates", headers=admin_headers(client))
 
     assert chat.status_code == 200
     assert candidates.status_code == 200
@@ -273,15 +291,18 @@ def test_admin_can_approve_candidate_as_supplemental_fact(tmp_path, monkeypatch)
         tts_mode="disabled",
     ) as client:
         client.post("/api/chat", json={"question": "梵宫门票多少钱？"})
-        candidate = client.get("/api/admin/web-fact-candidates").json()["items"][0]
+        headers = admin_headers(client)
+        candidate = client.get("/api/admin/web-fact-candidates", headers=headers).json()["items"][0]
         reviewed = client.post(
             f"/api/admin/web-fact-candidates/{candidate['id']}/review",
             json={"action": "approve_supplemental"},
+            headers=headers,
         )
         second_chat = client.post("/api/chat", json={"question": "梵宫门票多少钱？"})
         approved = client.get(
             "/api/admin/web-fact-candidates",
             params={"status": "approved_supplemental"},
+            headers=headers,
         )
 
     assert reviewed.status_code == 200
@@ -321,10 +342,12 @@ def test_admin_can_approve_candidate_as_official_structured_fact(tmp_path, monke
         tts_mode="disabled",
     ) as client:
         client.post("/api/chat", json={"question": "梵宫门票多少钱？"})
-        candidate = client.get("/api/admin/web-fact-candidates").json()["items"][0]
+        headers = admin_headers(client)
+        candidate = client.get("/api/admin/web-fact-candidates", headers=headers).json()["items"][0]
         reviewed = client.post(
             f"/api/admin/web-fact-candidates/{candidate['id']}/review",
             json={"action": "approve_official"},
+            headers=headers,
         )
         second_chat = client.post("/api/chat", json={"question": "梵宫门票多少钱？"})
 
@@ -366,19 +389,23 @@ def test_admin_can_reject_or_ignore_candidate_without_trusting_it(tmp_path, monk
         tts_mode="disabled",
     ) as client:
         client.post("/api/chat", json={"question": "梵宫门票多少钱？"})
-        candidate = client.get("/api/admin/web-fact-candidates").json()["items"][0]
+        headers = admin_headers(client)
+        candidate = client.get("/api/admin/web-fact-candidates", headers=headers).json()["items"][0]
         rejected = client.post(
             f"/api/admin/web-fact-candidates/{candidate['id']}/review",
             json={"action": "reject"},
+            headers=headers,
         )
         second_chat = client.post("/api/chat", json={"question": "梵宫门票多少钱？"})
         rejected_list = client.get(
             "/api/admin/web-fact-candidates",
             params={"status": "rejected"},
+            headers=headers,
         )
         ignored = client.post(
             f"/api/admin/web-fact-candidates/{candidate['id']}/review",
             json={"action": "ignore"},
+            headers=headers,
         )
 
     assert rejected.status_code == 200
@@ -403,16 +430,60 @@ def test_admin_token_can_protect_admin_endpoints(tmp_path):
         enable_admin_token="true",
         admin_token="secret-token",
     ) as client:
-        denied = client.get("/api/knowledge/docs")
-        allowed = client.get(
+        visitor = client.post(
+            "/api/auth/register",
+            json={"username": "visitor_001", "password": "secret123"},
+        )
+        admin = client.post(
+            "/api/auth/admin/login",
+            json={"username": "admin", "password": "123456"},
+        )
+        no_token = [
+            client.get("/api/admin/dashboard"),
+            client.get("/api/knowledge/docs"),
+            client.get("/api/logs/chats"),
+        ]
+        visitor_token = [
+            client.get(
+                "/api/admin/dashboard",
+                headers={"Authorization": f"Bearer {visitor.json()['token']}"},
+            ),
+            client.get(
+                "/api/knowledge/docs",
+                headers={"Authorization": f"Bearer {visitor.json()['token']}"},
+            ),
+            client.get(
+                "/api/logs/chats",
+                headers={"Authorization": f"Bearer {visitor.json()['token']}"},
+            ),
+        ]
+        admin_token = [
+            client.get(
+                "/api/admin/dashboard",
+                headers={"Authorization": f"Bearer {admin.json()['token']}"},
+            ),
+            client.get(
+                "/api/knowledge/docs",
+                headers={"Authorization": f"Bearer {admin.json()['token']}"},
+            ),
+            client.get(
+                "/api/logs/chats",
+                headers={"Authorization": f"Bearer {admin.json()['token']}"},
+            ),
+        ]
+        compat_token = client.get(
             "/api/knowledge/docs",
             headers={"x-admin-token": "secret-token"},
         )
 
-    assert denied.status_code == 401
-    assert denied.json() == {
+    assert visitor.status_code == 200
+    assert admin.status_code == 200
+    assert [response.status_code for response in no_token] == [401, 401, 401]
+    assert no_token[0].json() == {
         "message": "管理员令牌无效",
         "code": "ADMIN_TOKEN_INVALID",
         "status": 401,
     }
-    assert allowed.status_code == 200
+    assert [response.status_code for response in visitor_token] == [403, 403, 403]
+    assert [response.status_code for response in admin_token] == [200, 200, 200]
+    assert compat_token.status_code == 200

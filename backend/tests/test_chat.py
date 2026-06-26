@@ -1074,9 +1074,9 @@ def test_weather_question_uses_realtime_web_without_scenic_entity(tmp_path, monk
         def search(self, query, timeout_seconds):
             return [
                 {
-                    "title": "无锡天气预报",
-                    "snippet": "无锡今天多云，适合关注实时天气预报安排游览。",
-                    "url": "https://www.weather.com.cn/weather/101190201.shtml",
+                    "title": "北京天气预报",
+                    "snippet": "北京今天多云，建议关注实时天气预报安排出行。",
+                    "url": "https://www.weather.com.cn/weather/101010100.shtml",
                     "source_level": "authoritative",
                 }
             ]
@@ -1097,7 +1097,7 @@ def test_weather_question_uses_realtime_web_without_scenic_entity(tmp_path, monk
     )
 
     with TestClient(app) as client:
-        response = client.post("/api/chat", json={"question": "今天无锡天气如何？"})
+        response = client.post("/api/chat", json={"question": "今天北京的天气怎么样？"})
 
     assert response.status_code == 200
     body = response.json()
@@ -1105,7 +1105,9 @@ def test_weather_question_uses_realtime_web_without_scenic_entity(tmp_path, monk
     assert body["metrics"]["classification"]["fact_keys"] == ["weather"]
     assert body["metrics"]["web_supplement_required"] is True
     assert body["metrics"]["web_supplement_status"] == "success"
+    assert body["sources"]
     assert body["sources"][0]["source_type"] == "realtime_web"
+    assert {source["source_type"] for source in body["sources"]} == {"realtime_web"}
     assert "基于联网搜索" in body["answer"]
 
 

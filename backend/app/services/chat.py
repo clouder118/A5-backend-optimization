@@ -60,7 +60,12 @@ def answer_chat(
         web_supplement_required,
     )
     contexts = web_contexts + contexts
-    sources = [context.source for context in contexts]
+    sources = _visible_sources(
+        contexts,
+        classification,
+        web_supplement_required,
+        web_supplement_status,
+    )
     llm_started = perf_counter()
     answer, mode, degraded = _answer_text(
         settings,
@@ -142,7 +147,12 @@ def stream_chat_events(
         web_supplement_required,
     )
     contexts = web_contexts + contexts
-    sources = [context.source for context in contexts]
+    sources = _visible_sources(
+        contexts,
+        classification,
+        web_supplement_required,
+        web_supplement_status,
+    )
 
     llm_started = perf_counter()
     answer_parts: list[str] = []
@@ -507,6 +517,28 @@ def _needs_web_supplement(classification: dict, contexts) -> bool:
 
 def _has_realtime_web_context(contexts) -> bool:
     return any(context.source.source_type == "realtime_web" for context in contexts)
+
+
+def _visible_sources(
+    contexts,
+    classification: dict,
+    web_supplement_required: bool,
+    web_supplement_status: str,
+):
+    realtime_sources = [
+        context.source
+        for context in contexts
+        if context.source.source_type == "realtime_web"
+    ]
+    if _is_external_realtime_question(classification) and realtime_sources:
+        return realtime_sources
+    if (
+        web_supplement_required
+        and web_supplement_status != "success"
+        and _is_external_realtime_question(classification)
+    ):
+        return realtime_sources
+    return [context.source for context in contexts]
 
 
 def _web_supplement_contexts(

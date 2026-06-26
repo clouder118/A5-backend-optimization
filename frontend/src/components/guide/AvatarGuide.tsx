@@ -7,6 +7,7 @@ import Live2DGuideStage from './Live2DGuideStage';
 
 export type AvatarAudioState = 'idle' | 'pending' | 'ready' | 'playing' | 'failed';
 export type AvatarGuideVariant = 'compact' | 'stage';
+export type AvatarGuidePresentation = 'panel' | 'bare';
 
 export interface AvatarGuideProps {
   status: GuideStatus;
@@ -22,6 +23,9 @@ export interface AvatarGuideProps {
   modelUrl?: string;
   fallbackImageUrl?: string;
   enableLive2D?: boolean;
+  suppressInitialFallbackImage?: boolean;
+  presentation?: AvatarGuidePresentation;
+  showStatus?: boolean;
 }
 
 const statusText: Record<GuideStatus, { label: string; detail: string; badge: 'default' | 'processing' | 'success' }> = {
@@ -67,7 +71,11 @@ export default function AvatarGuide({
   modelUrl = defaultModelUrl,
   fallbackImageUrl = defaultFallbackImageUrl,
   enableLive2D = true,
+  suppressInitialFallbackImage = false,
+  presentation = 'panel',
+  showStatus = true,
 }: AvatarGuideProps) {
+  const isBarePresentation = presentation === 'bare';
   const current = statusText[status];
   const audio = audioStateText[audioState];
   const statusDetail = detail ?? current.detail;
@@ -78,6 +86,8 @@ export default function AvatarGuide({
   const [ambientCue, setAmbientCue] = useState<GuideEmotionCue>('idle');
   const lastActivityAtRef = useRef(Date.now());
   const shouldUseLive2D = variant === 'stage' && enableLive2D && !live2dError && live2dCanLoad;
+  const shouldSuppressImage =
+    suppressInitialFallbackImage && variant === 'stage' && enableLive2D && !live2dError && !live2dCanLoad;
   const explicitEmotionCue = emotionCue && emotionCue !== 'idle' ? emotionCue : undefined;
   const resolvedEmotionCue = useMemo<GuideEmotionCue>(() => {
     if (
@@ -138,30 +148,40 @@ export default function AvatarGuide({
 
   if (loading) {
     return (
-      <div className={`avatar-guide avatar-guide-${variant}`}>
+      <div className={`avatar-guide avatar-guide-${variant} ${isBarePresentation ? 'avatar-guide--bare' : ''}`}>
         <Skeleton.Image active className="avatar-skeleton" />
-        <div className="avatar-status">
-          <Skeleton active paragraph={{ rows: 2 }} />
-        </div>
+        {showStatus ? (
+          <div className="avatar-status">
+            <Skeleton active paragraph={{ rows: 2 }} />
+          </div>
+        ) : null}
       </div>
     );
   }
 
   return (
-    <div className={`avatar-guide avatar-guide-${variant} avatar-guide-${stageMode} is-${status} audio-${audioState}`}>
+    <div
+      className={`avatar-guide avatar-guide-${variant} avatar-guide-${stageMode} is-${status} audio-${audioState} ${
+        isBarePresentation ? 'avatar-guide--bare' : ''
+      }`}
+    >
       <div
         className={`avatar-stage-shell ${
-          shouldUseLive2D ? 'has-live2d' : imageFailed ? 'has-fallback' : 'has-image'
+          shouldUseLive2D ? 'has-live2d' : shouldSuppressImage ? 'is-awaiting-live2d' : imageFailed ? 'has-fallback' : 'has-image'
         }`}
         aria-label="AI 数字人导游"
       >
-        <div className="avatar-aura" />
-        <div className="avatar-scan-ring" />
-        <div className="avatar-light-dots">
-          <span />
-          <span />
-          <span />
-        </div>
+        {!isBarePresentation ? (
+          <>
+            <div className="avatar-aura" />
+            <div className="avatar-scan-ring" />
+            <div className="avatar-light-dots">
+              <span />
+              <span />
+              <span />
+            </div>
+          </>
+        ) : null}
 
         {shouldUseLive2D ? (
           <Live2DGuideStage
@@ -169,10 +189,11 @@ export default function AvatarGuide({
             audioState={audioState}
             emotionCue={resolvedEmotionCue}
             modelUrl={modelUrl}
+            showLoadingHint={!isBarePresentation}
             onInteract={registerActivity}
             onError={(message) => setLive2dError(message)}
           />
-        ) : (
+        ) : shouldSuppressImage ? null : (
           <>
             <img
               className="avatar-character"
@@ -191,45 +212,49 @@ export default function AvatarGuide({
           </>
         )}
 
-        <div className="avatar-speech-wave" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
+        {!isBarePresentation ? (
+          <div className="avatar-speech-wave" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
+        ) : null}
       </div>
 
-      <div className="avatar-status">
-        {error ? (
-          <Alert type="warning" showIcon message="数字人状态异常" description={error} />
-        ) : (
-          <Space direction="vertical" size={8} style={{ width: '100%' }}>
-            <Space size={8} wrap>
-              <Badge status={current.badge} text={title ?? current.label} />
-              <Tag color={audio.color}>{audio.label}</Tag>
-              {live2dError ? <Tag color="orange">Live2D 兜底</Tag> : null}
+      {showStatus ? (
+        <div className="avatar-status">
+          {error ? (
+            <Alert type="warning" showIcon message="数字人状态异常" description={error} />
+          ) : (
+            <Space direction="vertical" size={8} style={{ width: '100%' }}>
+              <Space size={8} wrap>
+                <Badge status={current.badge} text={title ?? current.label} />
+                <Tag color={audio.color}>{audio.label}</Tag>
+                {live2dError ? <Tag color="orange">Live2D 兜底</Tag> : null}
+              </Space>
+              {statusDetail ? (
+                <Typography.Text type="secondary">
+                  {status === 'thinking' ? <Spin size="small" style={{ marginRight: 8 }} /> : null}
+                  {statusDetail}
+                </Typography.Text>
+              ) : null}
+              {live2dError ? (
+                <Typography.Text
+                  type="secondary"
+                  className="avatar-live2d-error"
+                  title={live2dError}
+                  data-live2d-error={live2dError}
+                >
+                  Live2D 资源未就绪，已使用静态数字人兜底。
+                </Typography.Text>
+              ) : null}
+              {profileText ? (
+                <Typography.Text className="avatar-profile-text">{profileText}</Typography.Text>
+              ) : null}
             </Space>
-            {statusDetail ? (
-              <Typography.Text type="secondary">
-                {status === 'thinking' ? <Spin size="small" style={{ marginRight: 8 }} /> : null}
-                {statusDetail}
-              </Typography.Text>
-            ) : null}
-            {live2dError ? (
-              <Typography.Text
-                type="secondary"
-                className="avatar-live2d-error"
-                title={live2dError}
-                data-live2d-error={live2dError}
-              >
-                Live2D 资源未就绪，已使用静态数字人兜底。
-              </Typography.Text>
-            ) : null}
-            {profileText ? (
-              <Typography.Text className="avatar-profile-text">{profileText}</Typography.Text>
-            ) : null}
-          </Space>
-        )}
-      </div>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }

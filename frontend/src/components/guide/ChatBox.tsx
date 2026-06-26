@@ -1,33 +1,43 @@
 import { SendOutlined } from '@ant-design/icons';
-import { Alert, Button, Card, Empty, Input, Space, Spin, Tag, Typography } from 'antd';
+import { Button } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import type { ChatMessage } from '../../types/scenic';
 import AudioButton from './AudioButton';
 import SourceCard from './SourceCard';
 import SpeechInputButton from './SpeechInputButton';
 
+export interface GuideAssistantIdentity {
+  name: string;
+  subtitle: string;
+  avatarSrc: string;
+  avatarAlt: string;
+}
+
 export interface ChatBoxProps {
   messages?: ChatMessage[];
   loading?: boolean;
   error?: string;
-  emptyText?: string;
-  placeholder?: string;
-  submitLabel?: string;
   enableSpeechInput?: boolean;
+  assistant?: GuideAssistantIdentity;
   onSend: (question: string) => void;
   onSpeakStart?: () => void;
   onSpeakEnd?: () => void;
   onSpeakError?: (message: string) => void;
 }
 
+const defaultAssistant: GuideAssistantIdentity = {
+  name: '灵山胜境 AI 导游',
+  subtitle: '在线智能导览',
+  avatarSrc: '/avatar/haru-chat-avatar.jpeg',
+  avatarAlt: '灵山胜境 AI 导游头像',
+};
+
 export default function ChatBox({
   messages = [],
   loading = false,
   error,
-  emptyText = '还没有对话，先问 AI 导游一个问题吧。',
-  placeholder = '试试：灵山大佛有什么看点？',
-  submitLabel = '发送',
   enableSpeechInput = false,
+  assistant = defaultAssistant,
   onSend,
   onSpeakStart,
   onSpeakEnd,
@@ -35,135 +45,174 @@ export default function ChatBox({
 }: ChatBoxProps) {
   const [draft, setDraft] = useState('');
   const [speechError, setSpeechError] = useState('');
+  const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set());
   const messageEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     messageEndRef.current?.scrollIntoView({ block: 'end' });
-  }, [messages.length, loading]);
+  }, [expandedSources, messages]);
 
   const submit = () => {
     const question = draft.trim();
-    if (!question || loading) {
-      return;
-    }
+    if (!question || loading) return;
     setDraft('');
     onSend(question);
   };
 
+  const toggleSources = (messageId: string) => {
+    setExpandedSources((current) => {
+      const next = new Set(current);
+      if (next.has(messageId)) next.delete(messageId);
+      else next.add(messageId);
+      return next;
+    });
+  };
+
   const handleInputKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== 'Enter' || event.shiftKey) {
-      return;
-    }
+    if (event.key !== 'Enter') return;
     event.preventDefault();
     submit();
   };
 
   return (
-    <Card className="chat-panel" title="AI 导游问答">
-      {error ? (
-        <Alert type="warning" showIcon message="问答服务异常" description={error} style={{ marginBottom: 12 }} />
-      ) : null}
-      {speechError ? (
-        <Alert
-          type="info"
-          showIcon
-          message="语音输入提示"
-          description={speechError}
-          style={{ marginBottom: 12 }}
-        />
-      ) : null}
-      <div className="message-list">
-        {messages.length === 0 && !loading ? <Empty description={emptyText} /> : null}
-        {messages.map((item) => (
-          <div key={item.id} className={`chat-bubble ${item.role}`}>
-            <Typography.Paragraph style={{ marginBottom: item.sources?.length ? 8 : 0 }}>
-              {item.content}
-            </Typography.Paragraph>
-            {item.isFallback ? (
-              <Tag color="gold" style={{ marginBottom: 8 }}>
-                兜底回答
-              </Tag>
-            ) : null}
-            {hasWebSource(item) && !item.isFallback ? (
-              <Tag color="blue" style={{ marginBottom: 8 }}>
-                联网补充
-              </Tag>
-            ) : null}
-            {hasSourceConflict(item) ? (
-              <Alert
-                type="warning"
-                showIcon
-                message="来源存在差异"
-                description="当前回答已按数据库优先原则处理，涉及实时信息请以官方公告或现场说明为准。"
-                style={{ marginBottom: 8 }}
+    <section className="guide-aichat" data-testid="guide-chat-window" aria-label="AI 导游对话">
+      <div className="bg" aria-hidden="true" />
+      <div className="chat ai-chat chat-panel">
+        <div className="chat-title">
+          <h1>{assistant.name}</h1>
+          <h2>{assistant.subtitle}</h2>
+          <figure className="avatar">
+            <img src={assistant.avatarSrc} alt={assistant.avatarAlt} data-testid="guide-chat-avatar" />
+          </figure>
+        </div>
+
+        <div className="messages">
+          <div className="messages-content">
+            {messages.map((item, index) => {
+              const isAssistant = item.role === 'assistant';
+              const isTyping = isAssistant && !item.content;
+              const sourceExpanded = expandedSources.has(item.id);
+
+              if (isTyping) {
+                return (
+                  <div className="message loading new" data-testid="guide-typing-message" key={item.id}>
+                    <figure className="avatar" aria-hidden="true">
+                      <img src={assistant.avatarSrc} alt="" />
+                    </figure>
+                    <span />
+                  </div>
+                );
+              }
+
+              return (
+                <div className="guide-aichat__message-block" key={item.id}>
+                  <article className={`message ${isAssistant ? '' : 'message-personal'} new chat-bubble ${item.role}`}>
+                    {isAssistant ? (
+                      <figure className="avatar" aria-hidden="true">
+                        <img src={assistant.avatarSrc} alt="" />
+                      </figure>
+                    ) : null}
+                    <p>{item.content}</p>
+                    {isAssistant ? (
+                      <AudioButton
+                        variant="minimal"
+                        text={item.content}
+                        audioUrl={item.audioUrl}
+                        loading={item.ttsStatus === 'pending'}
+                        disabled={item.ttsStatus === 'pending'}
+                        onStart={onSpeakStart}
+                        onEnd={onSpeakEnd}
+                        onError={() => onSpeakError?.('语音播放暂时不可用，已保留文字回答。')}
+                      />
+                    ) : null}
+                    {shouldShowTimestamp(messages, index) ? <span className="timestamp">{formatTime(item.createdAt)}</span> : null}
+                  </article>
+
+                  {isAssistant && item.sources?.length ? (
+                    <div className="guide-aichat__sources">
+                      <button
+                        type="button"
+                        className="guide-aichat__source-toggle"
+                        data-testid="guide-source-toggle"
+                        aria-expanded={sourceExpanded}
+                        onClick={() => toggleSources(item.id)}
+                      >
+                        资料来源
+                      </button>
+                      {sourceExpanded ? (
+                        <div className="source-list">
+                          {item.sources.map((source) => (
+                            <SourceCard key={source.id} source={source} />
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+            <div ref={messageEndRef} />
+          </div>
+        </div>
+
+        <form
+          className="message-box chat-input-row"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submit();
+          }}
+        >
+          <textarea
+            className="message-input"
+            value={draft}
+            placeholder="……"
+            disabled={loading}
+            rows={1}
+            aria-label="输入问题"
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={handleInputKeyDown}
+          />
+          <div className="guide-aichat__input-actions">
+            {enableSpeechInput ? (
+              <SpeechInputButton
+                className="message-voice"
+                iconOnly
+                disabled={loading}
+                onTranscript={(text) => {
+                  setSpeechError('');
+                  setDraft(text);
+                }}
+                onError={setSpeechError}
               />
             ) : null}
-            {item.role === 'assistant' ? (
-              <Space size={8} wrap>
-                <AudioButton
-                  text={item.content}
-                  audioUrl={item.audioUrl}
-                  label={item.ttsStatus === 'pending' ? '语音生成中' : '播放讲解'}
-                  loading={item.ttsStatus === 'pending'}
-                  disabled={item.ttsStatus === 'pending'}
-                  onStart={onSpeakStart}
-                  onEnd={onSpeakEnd}
-                  onError={() => onSpeakError?.('语音播放暂时不可用，已保留文字讲解。')}
-                />
-                {item.ttsStatus === 'failed' ? <Tag color="orange">语音暂不可用</Tag> : null}
-              </Space>
-            ) : null}
-            {item.sources?.length ? (
-              <div className="source-list">
-                {item.sources.map((source) => (
-                  <SourceCard key={source.id} source={source} />
-                ))}
-              </div>
-            ) : null}
+            <Button
+              className="message-submit"
+              data-testid="guide-send"
+              type="primary"
+              htmlType="submit"
+              icon={<SendOutlined />}
+              aria-label="发送问题"
+              disabled={!draft.trim() || loading}
+            />
           </div>
-        ))}
-        {loading ? (
-          <div className="chat-bubble assistant">
-            <Spin size="small" /> 正在检索景区资料并组织回答...
-          </div>
-        ) : null}
-        <div ref={messageEndRef} />
+        </form>
       </div>
-      <div className="chat-input-row">
-        {enableSpeechInput ? (
-          <SpeechInputButton
-            disabled={loading}
-            onTranscript={(text) => {
-              setSpeechError('');
-              setDraft(text);
-            }}
-            onError={setSpeechError}
-          />
-        ) : null}
-        <Input.TextArea
-          size="large"
-          value={draft}
-          placeholder={placeholder}
-          disabled={loading}
-          autoSize={{ minRows: 1, maxRows: 4 }}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={handleInputKeyDown}
-        />
-        <Button type="primary" size="large" icon={<SendOutlined />} loading={loading} onClick={submit}>
-          {submitLabel}
-        </Button>
-      </div>
-    </Card>
+      <span className="guide-aichat__sr-status" aria-live="polite">
+        {speechError || error || ''}
+      </span>
+    </section>
   );
 }
 
-function hasWebSource(message: ChatMessage) {
-  return message.sources?.some((source) => ['approved_web', 'realtime_web'].includes(source.sourceType ?? ''));
+function shouldShowTimestamp(messages: ChatMessage[], index: number) {
+  const current = messages[index]?.createdAt;
+  if (!current) return false;
+  const previous = messages[index - 1]?.createdAt;
+  if (!previous) return true;
+  return Math.floor(current / 60_000) !== Math.floor(previous / 60_000);
 }
 
-function hasSourceConflict(message: ChatMessage) {
-  const sourceTypes = new Set(message.sources?.map((source) => source.sourceType));
-  const hasDatabase = sourceTypes.has('database');
-  const hasWeb = sourceTypes.has('approved_web') || sourceTypes.has('realtime_web');
-  return hasDatabase && hasWeb && /冲突|差异|不同来源/.test(message.content);
+function formatTime(timestamp?: number) {
+  const date = new Date(timestamp ?? Date.now());
+  return `${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
 }

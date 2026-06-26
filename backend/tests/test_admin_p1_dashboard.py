@@ -22,6 +22,15 @@ def create_test_client(tmp_path):
     return TestClient(app)
 
 
+def admin_headers(client):
+    response = client.post(
+        "/api/auth/admin/login",
+        json={"username": "admin", "password": "123456"},
+    )
+    assert response.status_code == 200
+    return {"Authorization": f"Bearer {response.json()['token']}"}
+
+
 def test_chat_logs_return_sources_and_session_profile(tmp_path):
     with create_test_client(tmp_path) as client:
         chat_response = client.post(
@@ -35,7 +44,7 @@ def test_chat_logs_return_sources_and_session_profile(tmp_path):
                 },
             },
         )
-        logs_response = client.get("/api/logs/chats")
+        logs_response = client.get("/api/logs/chats", headers=admin_headers(client))
 
     assert chat_response.status_code == 200
     assert logs_response.status_code == 200
@@ -56,7 +65,7 @@ def test_admin_dashboard_returns_p1_operational_summary(tmp_path):
                 "profile": {"visitor_type": "family"},
             },
         )
-        response = client.get("/api/admin/dashboard")
+        response = client.get("/api/admin/dashboard", headers=admin_headers(client))
 
     assert response.status_code == 200
     body = response.json()

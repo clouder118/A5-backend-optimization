@@ -72,6 +72,12 @@ class Settings:
     )
     admin_token: str = env_value("ADMIN_TOKEN", "")
     enable_admin_token: str = env_value("ENABLE_ADMIN_TOKEN", "false")
+    admin_default_username: str = env_value("ADMIN_DEFAULT_USERNAME", "admin")
+    admin_default_password: str = env_value("ADMIN_DEFAULT_PASSWORD", "123456")
+    auth_token_secret: str = env_value("AUTH_TOKEN_SECRET", "a5-local-dev-auth-secret")
+    auth_token_ttl_seconds: int = field(
+        default_factory=lambda: int(os.getenv("AUTH_TOKEN_TTL_SECONDS", "604800"))
+    )
 
 
 settings = Settings()
