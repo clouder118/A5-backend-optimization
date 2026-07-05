@@ -1,0 +1,260 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-template-columns: 1fr;
+  overflow: hidden;
+  color: #ff6666;
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: clamp(18px, 3vw, 42px);
+  font-weight: 100;
+  text-align: center;
+  text-shadow: 0 0 5px red;
+  background-color: #0f0000;
+  background-image:
+    radial-gradient(circle at 18% 20%, rgba(255, 102, 102, 0.12), transparent 0.08rem),
+    radial-gradient(circle at 76% 36%, rgba(255, 255, 255, 0.08), transparent 0.07rem),
+    radial-gradient(circle at 44% 82%, rgba(255, 102, 102, 0.08), transparent 0.06rem),
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.014) 1px, transparent 1px),
+    #0f0000;
+  background-size: 97px 89px, 121px 107px, 83px 79px, 100px 100px, 100px 100px, auto;
+  animation: overlayEnter 160ms linear both;
+}
+
+.overlayExiting {
+  pointer-events: none;
+  animation: overlayExit 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.terminal {
+  position: relative;
+  grid-row: 1;
+  grid-column: 1;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 3vw;
+  min-width: 0;
+  padding: max(24px, 3vw);
+}
+
+.terminal p {
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.5;
+}
+
+.glitch {
+  animation: glitch 1.5s linear infinite;
+}
+
+.glitchClone {
+  pointer-events: none;
+  opacity: 0.2;
+}
+
+.glitchClone .hydra {
+  opacity: 0.8;
+  filter: blur(2px);
+}
+
+.glitchTop {
+  animation: glitchTop 1s linear infinite;
+}
+
+.glitchTop .hydra {
+  transform: translate(4vw, 4vw);
+}
+
+.glitchBottom {
+  animation: glitchBottom 0.75s linear infinite;
+}
+
+.glitchBottom .hydra {
+  transform: translate(-1vw, -1vw);
+}
+
+.scanline {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.03);
+  animation: scanline 6s linear infinite;
+}
+
+.spinner {
+  grid-row: 2;
+  grid-column: 2;
+  align-self: start;
+  justify-self: center;
+  transform: translateY(calc(-100% - 3vw));
+}
+
+.hydra {
+  grid-row: 2;
+  grid-column: 2;
+  width: max-content;
+  max-width: min(86vw, 760px);
+  padding: clamp(16px, 2vw, 32px);
+  border: clamp(2px, 0.2vw, 4px) solid #ff6666;
+  box-shadow: 0 0 2px red, inset 0 0 2px red;
+  animation: hydraAppear 180ms linear both;
+}
+
+.hydraSuccess {
+  animation: hydraSuccess 600ms cubic-bezier(0, 0, 0.32, 1) both;
+}
+
+.textSmall {
+  font-size: clamp(13px, 1.75vw, 25px);
+}
+
+.textSmall + .textSmall {
+  padding-top: 0.5vw;
+}
+
+.loadingBar {
+  padding-top: 1vw;
+  white-space: nowrap;
+}
+
+.loadingBarUnloaded {
+  color: #fff;
+  text-shadow: 0 0 5px #fff;
+}
+
+@keyframes scanline {
+  0.01% {
+    transform: translateY(-100%);
+  }
+
+  99.99% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(-100%);
+  }
+}
+
+@keyframes glitch {
+  2%,
+  64% {
+    transform: translate(2px, 0) skew(0deg);
+  }
+
+  4%,
+  60% {
+    transform: translate(-2px, 0) skew(0deg);
+  }
+
+  62% {
+    transform: translate(0, 0) skew(5deg);
+  }
+}
+
+@keyframes glitchTop {
+  2%,
+  64% {
+    transform: translate(2px, -2px);
+  }
+
+  4%,
+  60% {
+    transform: translate(-2px, 2px);
+  }
+
+  62% {
+    transform: translate(13px, -1px) skew(-13deg);
+  }
+}
+
+@keyframes glitchBottom {
+  2%,
+  64% {
+    transform: translate(-2px, 0);
+  }
+
+  4%,
+  60% {
+    transform: translate(-2px, 0);
+  }
+
+  62% {
+    transform: translate(-22px, 5px) skew(21deg);
+  }
+}
+
+@keyframes hydraAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes hydraSuccess {
+  0% {
+    transform: scale(1, 0.42);
+  }
+
+  52% {
+    transform: scale(1, 1.2);
+  }
+
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes overlayEnter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlayExit {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .terminal {
+    padding: 20px 12px;
+  }
+
+  .hydra {
+    max-width: calc(100vw - 28px);
+    padding: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .overlayExiting,
+  .glitch,
+  .glitchTop,
+  .glitchBottom,
+  .scanline,
+  .hydra,
+  .hydraSuccess {
+    animation: none;
+  }
+}

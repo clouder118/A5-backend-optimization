@@ -37,4 +37,8 @@ def stream_chat(
             request.app.state.tts_jobs,
         ),
         media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
     )

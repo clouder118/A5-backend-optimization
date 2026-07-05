@@ -2,27 +2,31 @@ import type { ThemeConfig } from 'antd';
 
 export const appTheme: ThemeConfig = {
   token: {
-    colorPrimary: '#16776f',
-    colorInfo: '#16776f',
-    colorSuccess: '#3f8f45',
-    colorWarning: '#c27a1a',
-    colorText: '#1f2a2a',
-    colorBgLayout: '#f5f7f3',
-    borderRadius: 8,
+    colorPrimary: '#d8dcc9',
+    colorInfo: '#9aa696',
+    colorSuccess: '#a8c2a2',
+    colorWarning: '#d6b778',
+    colorError: '#d78b7f',
+    colorText: '#f3f0e8',
+    colorTextSecondary: 'rgba(243, 240, 232, 0.66)',
+    colorBgLayout: '#090a09',
+    colorBgContainer: '#111310',
+    colorBorder: 'rgba(216, 220, 201, 0.18)',
+    borderRadius: 6,
     fontFamily:
-      '"Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      '"Avenir Next", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   components: {
     Button: {
-      borderRadius: 8,
+      borderRadius: 4,
       controlHeight: 40,
     },
     Card: {
-      borderRadiusLG: 8,
+      borderRadiusLG: 4,
     },
     Layout: {
-      headerBg: '#ffffff',
-      bodyBg: '#f5f7f3',
+      headerBg: '#090a09',
+      bodyBg: '#090a09',
     },
   },
 };

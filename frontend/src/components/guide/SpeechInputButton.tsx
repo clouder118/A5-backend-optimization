@@ -46,6 +46,8 @@ declare global {
 
 export interface SpeechInputButtonProps {
   disabled?: boolean;
+  className?: string;
+  iconOnly?: boolean;
   onTranscript: (text: string) => void;
   onError?: (message: string) => void;
 }
@@ -61,6 +63,8 @@ const statusText: Record<SpeechInputStatus, string> = {
 
 export default function SpeechInputButton({
   disabled = false,
+  className,
+  iconOnly = false,
   onTranscript,
   onError,
 }: SpeechInputButtonProps) {
@@ -126,18 +130,21 @@ export default function SpeechInputButton({
     }
   };
 
-  return (
-    <Tooltip title={supported ? statusText[status] : statusText.unsupported}>
-      <Button
-        aria-label="语音输入"
-        icon={<AudioOutlined />}
-        disabled={disabled || !supported}
-        loading={status === 'requesting'}
-        danger={listening}
-        onClick={listening ? stopListening : startListening}
-      >
-        {listening ? '停止' : '语音'}
-      </Button>
-    </Tooltip>
+  const button = (
+    <Button
+      aria-label={listening ? '停止语音输入' : '语音输入'}
+      aria-pressed={listening}
+      className={className}
+      data-listening={listening}
+      data-testid="guide-voice-input"
+      icon={<AudioOutlined />}
+      disabled={disabled || !supported}
+      loading={status === 'requesting'}
+      onClick={listening ? stopListening : startListening}
+    >
+      {iconOnly ? null : listening ? '停止' : '语音输入'}
+    </Button>
   );
+
+  return iconOnly ? button : <Tooltip title={supported ? statusText[status] : statusText.unsupported}>{button}</Tooltip>;
 }

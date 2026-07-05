@@ -24,6 +24,11 @@ from app.models import (
     WebFactCandidate,
 )
 from app.schemas import RouteUpsert, SpotDetail, SpotUpsert
+from app.services.operations import (
+    VALID_RANGES,
+    build_operations_overview,
+    build_visitor_insights_report,
+)
 
 router = APIRouter(
     prefix="/api/admin",
@@ -70,14 +75,15 @@ def get_admin_dashboard(request: Request, db: Session = Depends(get_db)) -> dict
         if isinstance(total_ms, int | float):
             total_ms_values.append(float(total_ms))
 
-        session = sessions.get(message.session_id)
-        visitor_type = (session.visitor_type if session else "") or "未标注"
-        preference_counter[visitor_type] += 1
-
         for source in message.sources_json or []:
             spot_name = str(source.get("spot_name") or source.get("spotName") or "").strip()
             if spot_name and spot_name not in {"通用资料", "灵山胜境资料"}:
                 top_spots[spot_name] += 1
+
+    for session_id in dict.fromkeys(message.session_id for message in messages):
+        session = sessions.get(session_id)
+        for interest_tag in _session_interest_tags(session):
+            preference_counter[interest_tag] += 1
 
     top_questions = Counter(message.question for message in messages).most_common(6)
     recent_logs = [
@@ -122,6 +128,58 @@ def get_admin_dashboard(request: Request, db: Session = Depends(get_db)) -> dict
         "recent_logs": recent_logs,
         "behavior_summary": _load_behavior_summary(active_settings.derived_knowledge_path),
     }
+
+
+def _session_interest_tags(session: ChatSession | None) -> list[str]:
+    if session is None:
+        return ["未标注"]
+
+    preference = session.preference.strip()
+    if preference:
+        try:
+            profile = json.loads(preference)
+        except json.JSONDecodeError:
+            profile = None
+
+        if isinstance(profile, dict):
+            tags = profile.get("interest_tags")
+            if isinstance(tags, list):
+                normalized = list(
+                    dict.fromkeys(str(tag).strip() for tag in tags if str(tag).strip())
+                )
+                if normalized:
+                    return normalized
+        elif "兴趣：" in preference:
+            interest_text = preference.rsplit("兴趣：", 1)[1].split("；", 1)[0]
+            normalized = [
+                tag.strip()
+                for tag in interest_text.split("、")
+                if tag.strip() and tag.strip() != "暂无特别兴趣"
+            ]
+            if normalized:
+                return list(dict.fromkeys(normalized))
+
+    visitor_type = session.visitor_type.strip()
+    return [visitor_type or "未标注"]
+
+
+@router.get("/operations/overview")
+def get_operations_overview(range: str = "week", db: Session = Depends(get_db)) -> dict:
+    if range not in VALID_RANGES:
+        raise ApiError("不支持的运营分析时间范围", "OPERATIONS_RANGE_INVALID", 400)
+    return build_operations_overview(db, range)
+
+
+@router.get("/visitor-insights/report")
+def get_visitor_insights_report(
+    request: Request,
+    range: str = "7d",
+    db: Session = Depends(get_db),
+) -> dict:
+    if range not in VALID_RANGES:
+        raise ApiError("不支持的游客感受度报告时间范围", "VISITOR_INSIGHTS_RANGE_INVALID", 400)
+    active_settings = getattr(request.app.state, "settings", settings)
+    return build_visitor_insights_report(db, range, active_settings)
 
 
 def _load_behavior_summary(derived_knowledge_path: str) -> dict:
@@ -311,6 +369,7 @@ def _replace_route_spots(db: Session, payload: RouteUpsert) -> None:
 def _route_payload(route: Route, payload: RouteUpsert) -> dict:
     return {
         "id": route.id,
+        "map_id": route.map_id,
         "name": route.name,
         "theme": route.theme,
         "duration_minutes": route.duration_minutes,

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import os
 from pathlib import Path
+import sys
 
 from dotenv import load_dotenv
 
@@ -22,6 +23,24 @@ def env_value(name: str, default: str = ""):
 
 def env_value_with_alias(name: str, alias: str, default: str = ""):
     return field(default_factory=lambda: os.getenv(name) or os.getenv(alias) or default)
+
+
+def env_value_with_aliases(name: str, aliases: tuple[str, ...], default: str = ""):
+    return field(
+        default_factory=lambda: os.getenv(name)
+        or next((os.getenv(alias) for alias in aliases if os.getenv(alias)), None)
+        or default
+    )
+
+
+def default_embedding_index_on_startup() -> str:
+    explicit_value = os.getenv("RAG_EMBEDDING_INDEX_ON_STARTUP")
+    if explicit_value is not None:
+        return explicit_value
+    is_pytest = os.getenv("PYTEST_CURRENT_TEST") or any(
+        "pytest" in Path(arg).name.lower() for arg in sys.argv
+    )
+    return "false" if is_pytest else "true"
 
 
 @dataclass(frozen=True)
@@ -46,7 +65,83 @@ class Settings:
     llm_base_url: str = env_value("LLM_BASE_URL", "https://api.xiaomimimo.com/v1")
     llm_api_key: str = env_value_with_alias("LLM_API_KEY", "MIMO_API_KEY")
     llm_model: str = env_value("LLM_MODEL", "mimo-v2.5")
-    rag_retrieval_mode: str = env_value("RAG_RETRIEVAL_MODE", "keyword")
+    guide_style: str = env_value("GUIDE_STYLE", "warm_real_guide")
+    guide_route_trigger_strict: str = env_value("GUIDE_ROUTE_TRIGGER_STRICT", "true")
+    llm_temperature_fact: float = field(
+        default_factory=lambda: float(os.getenv("LLM_TEMPERATURE_FACT", "0.35"))
+    )
+    llm_temperature_guide: float = field(
+        default_factory=lambda: float(os.getenv("LLM_TEMPERATURE_GUIDE", "0.55"))
+    )
+    llm_temperature_service: float = field(
+        default_factory=lambda: float(os.getenv("LLM_TEMPERATURE_SERVICE", "0.65"))
+    )
+    llm_temperature_route: float = field(
+        default_factory=lambda: float(os.getenv("LLM_TEMPERATURE_ROUTE", "0.45"))
+    )
+    llm_max_completion_tokens: int = field(
+        default_factory=lambda: int(os.getenv("LLM_MAX_COMPLETION_TOKENS", "700"))
+    )
+    rag_retrieval_mode: str = env_value("RAG_RETRIEVAL_MODE", "hybrid")
+    rag_vector_mode: str = env_value("RAG_VECTOR_MODE", "openai_compatible")
+    rag_embedding_base_url: str = field(
+        default_factory=lambda: os.getenv(
+            "RAG_EMBEDDING_BASE_URL",
+            "https://dashscope.aliyuncs.com/compatible-mode/v1",
+        )
+    )
+    rag_embedding_api_key: str = env_value_with_aliases(
+        "RAG_EMBEDDING_API_KEY",
+        ("DASHSCOPE_API_KEY",),
+    )
+    rag_embedding_model: str = env_value(
+        "RAG_EMBEDDING_MODEL",
+        "text-embedding-v4",
+    )
+    rag_embedding_timeout_seconds: float = field(
+        default_factory=lambda: float(os.getenv("RAG_EMBEDDING_TIMEOUT_SECONDS", "0.8"))
+    )
+    rag_embedding_index_timeout_seconds: float = field(
+        default_factory=lambda: float(
+            os.getenv("RAG_EMBEDDING_INDEX_TIMEOUT_SECONDS", "8.0")
+        )
+    )
+    rag_embedding_index_budget_seconds: float = field(
+        default_factory=lambda: float(
+            os.getenv("RAG_EMBEDDING_INDEX_BUDGET_SECONDS", "30.0")
+        )
+    )
+    rag_embedding_index_batch_size: int = field(
+        default_factory=lambda: int(os.getenv("RAG_EMBEDDING_INDEX_BATCH_SIZE", "8"))
+    )
+    rag_embedding_index_on_startup: str = field(
+        default_factory=default_embedding_index_on_startup
+    )
+    guide_warmup_on_startup: str = field(
+        default_factory=lambda: os.getenv(
+            "GUIDE_WARMUP_ON_STARTUP",
+            "false" if os.getenv("PYTEST_CURRENT_TEST") or any("pytest" in Path(arg).name.lower() for arg in sys.argv) else "true",
+        )
+    )
+    guide_warmup_max_questions: int = field(
+        default_factory=lambda: int(os.getenv("GUIDE_WARMUP_MAX_QUESTIONS", "40"))
+    )
+    guide_warmup_build_answer_cache: str = env_value(
+        "GUIDE_WARMUP_BUILD_ANSWER_CACHE",
+        "false",
+    )
+    guide_retrieval_cache_ttl_seconds: int = field(
+        default_factory=lambda: int(os.getenv("GUIDE_RETRIEVAL_CACHE_TTL_SECONDS", "1800"))
+    )
+    guide_retrieval_cache_size: int = field(
+        default_factory=lambda: int(os.getenv("GUIDE_RETRIEVAL_CACHE_SIZE", "256"))
+    )
+    guide_answer_cache_ttl_seconds: int = field(
+        default_factory=lambda: int(os.getenv("GUIDE_ANSWER_CACHE_TTL_SECONDS", "1800"))
+    )
+    guide_answer_cache_size: int = field(
+        default_factory=lambda: int(os.getenv("GUIDE_ANSWER_CACHE_SIZE", "128"))
+    )
     web_search_mode: str = env_value("WEB_SEARCH_MODE", "mimo")
     web_search_endpoint: str = env_value("WEB_SEARCH_ENDPOINT", "")
     web_search_api_key: str = env_value("WEB_SEARCH_API_KEY", "")
@@ -64,6 +159,30 @@ class Settings:
     tts_voice: str = env_value("TTS_VOICE", "mimo_default")
     tts_audio_format: str = env_value("TTS_AUDIO_FORMAT", "mp3")
     tts_output_dir: str = env_value("TTS_OUTPUT_DIR", "./data/tts")
+    avatar_package_dir: str = env_value(
+        "AVATAR_PACKAGE_DIR",
+        "./data/avatar_packages",
+    )
+    avatar_upload_max_bytes: int = field(
+        default_factory=lambda: int(
+            os.getenv("AVATAR_UPLOAD_MAX_BYTES", str(100 * 1024 * 1024))
+        )
+    )
+    avatar_extracted_max_bytes: int = field(
+        default_factory=lambda: int(
+            os.getenv("AVATAR_EXTRACTED_MAX_BYTES", str(300 * 1024 * 1024))
+        )
+    )
+    avatar_preview_token_ttl_seconds: int = field(
+        default_factory=lambda: int(
+            os.getenv("AVATAR_PREVIEW_TOKEN_TTL_SECONDS", "600")
+        )
+    )
+    avatar_runtime_token_ttl_seconds: int = field(
+        default_factory=lambda: int(
+            os.getenv("AVATAR_RUNTIME_TOKEN_TTL_SECONDS", "7200")
+        )
+    )
     cors_origins: str = env_value(
         "CORS_ORIGINS",
         "http://127.0.0.1:5173,http://localhost:5173,"
@@ -72,6 +191,12 @@ class Settings:
     )
     admin_token: str = env_value("ADMIN_TOKEN", "")
     enable_admin_token: str = env_value("ENABLE_ADMIN_TOKEN", "false")
+    admin_default_username: str = env_value("ADMIN_DEFAULT_USERNAME", "admin")
+    admin_default_password: str = env_value("ADMIN_DEFAULT_PASSWORD", "123456")
+    auth_token_secret: str = env_value("AUTH_TOKEN_SECRET", "a5-local-dev-auth-secret")
+    auth_token_ttl_seconds: int = field(
+        default_factory=lambda: int(os.getenv("AUTH_TOKEN_TTL_SECONDS", "604800"))
+    )
 
 
 settings = Settings()

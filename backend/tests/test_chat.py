@@ -3,9 +3,13 @@ import json
 import sqlite3
 
 from fastapi.testclient import TestClient
+import httpx
 
 from app.core.config import Settings
 from app.main import create_app
+from app.services.guide_warmup import GuideWarmupService
+from app.services import rag as rag_service
+from app.services.embeddings import EmbeddingClient
 
 SOURCE_PACKAGE_PATH = (
     Path(__file__).resolve().parents[2] / "Scenic Area Public Information Package"
@@ -28,6 +32,53 @@ def create_test_client(tmp_path):
         )
     )
     return TestClient(app)
+
+
+def create_vector_test_client(tmp_path):
+    db_path = tmp_path / "app.db"
+    app = create_app(
+        Settings(
+            database_url=f"sqlite:///{db_path}",
+            source_package_path=str(SOURCE_PACKAGE_PATH),
+            derived_knowledge_path=str(DERIVED_KNOWLEDGE_PATH),
+            llm_mode="openai_compatible",
+            llm_provider="mimo",
+            llm_base_url="https://api.xiaomimimo.com/v1",
+            llm_api_key="",
+            llm_model="mimo-v2.5",
+            tts_mode="disabled",
+            rag_retrieval_mode="hybrid",
+            rag_vector_mode="openai_compatible",
+            rag_embedding_base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+            rag_embedding_api_key="test-key",
+            rag_embedding_model="text-embedding-v4",
+            rag_embedding_timeout_seconds=0.05,
+            rag_embedding_index_on_startup="true",
+        )
+    )
+    return TestClient(app)
+
+
+def test_guide_warmup_disabled_does_not_open_session(tmp_path):
+    opened = False
+
+    def session_factory():
+        nonlocal opened
+        opened = True
+        raise AssertionError("warmup should not open a session when disabled")
+
+    service = GuideWarmupService(
+        Settings(
+            database_url=f"sqlite:///{tmp_path / 'app.db'}",
+            guide_warmup_on_startup="false",
+            tts_mode="disabled",
+        ),
+        session_factory,
+    )
+    service.start()
+
+    assert service.status == "disabled"
+    assert opened is False
 
 
 def test_chat_logs_question_answer_and_sources(tmp_path):
@@ -174,6 +225,64 @@ def test_chat_uses_structured_tags_for_suitability_questions(tmp_path):
     assert body["sources"][0]["section"] == "结构化标签"
     assert body["sources"][0]["source_type"] == "database"
     assert "佛教文化" in body["sources"][0]["snippet"]
+
+
+def test_vector_search_runs_for_vague_scenic_questions(tmp_path, monkeypatch):
+    calls = []
+    rag_service._QUERY_EMBEDDING_CACHE.clear()
+
+    def fake_embed_texts(self, model, texts):
+        calls.append(list(texts))
+        return [[1.0, 0.2, 0.1] for _ in texts]
+
+    monkeypatch.setattr(EmbeddingClient, "embed_texts", fake_embed_texts)
+    with create_vector_test_client(tmp_path) as client:
+        startup_calls = len(calls)
+        response = client.post("/api/chat", json={"question": "哪里比较出片？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["metrics"]["vector_status"] in {"ready", "partial_index"}
+    assert body["metrics"]["embedding_ms"] >= 0
+    assert len(calls) > startup_calls
+
+
+def test_vector_search_skips_structured_fact_questions(tmp_path, monkeypatch):
+    calls = []
+    rag_service._QUERY_EMBEDDING_CACHE.clear()
+
+    def fake_embed_texts(self, model, texts):
+        calls.append(list(texts))
+        return [[1.0, 0.2, 0.1] for _ in texts]
+
+    monkeypatch.setattr(EmbeddingClient, "embed_texts", fake_embed_texts)
+    with create_vector_test_client(tmp_path) as client:
+        startup_calls = len(calls)
+        response = client.post("/api/chat", json={"question": "灵山大佛有多高？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["metrics"]["vector_status"] == "skipped_structured"
+    assert len(calls) == startup_calls
+    assert body["sources"][0]["section"] == "结构化事实"
+
+
+def test_vector_query_timeout_degrades_to_non_vector_retrieval(tmp_path, monkeypatch):
+    rag_service._QUERY_EMBEDDING_CACHE.clear()
+
+    def fake_embed_texts(self, model, texts):
+        if len(texts) == 1 and "出片" in texts[0]:
+            raise httpx.TimeoutException("mock timeout")
+        return [[1.0, 0.2, 0.1] for _ in texts]
+
+    monkeypatch.setattr(EmbeddingClient, "embed_texts", fake_embed_texts)
+    with create_vector_test_client(tmp_path) as client:
+        response = client.post("/api/chat", json={"question": "哪里比较出片？"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["metrics"]["vector_status"] == "query_timeout"
+    assert body["answer"]
 
 
 def test_chat_reports_question_intent_categories(tmp_path):
@@ -349,7 +458,7 @@ def test_missing_structured_fact_marks_web_supplement_needed_in_fallback(tmp_pat
     assert response.status_code == 200
     body = response.json()
     assert body["metrics"]["web_supplement_required"] is True
-    assert "联网补充" in body["answer"]
+    assert "不能" in body["answer"] or "确认" in body["answer"]
     assert "知识库" not in body["answer"]
 
 
@@ -393,8 +502,8 @@ def test_missing_fact_uses_realtime_web_supplement_with_source_url(tmp_path, mon
     body = response.json()
     assert body["metrics"]["web_supplement_required"] is True
     assert body["metrics"]["web_supplement_status"] == "success"
-    assert "基于联网搜索" in body["answer"]
-    assert "https://www.lingshan.com/tickets" in body["answer"]
+    assert "联网搜索" not in body["answer"]
+    assert "来源" not in body["answer"]
     assert body["sources"][0]["source_type"] == "realtime_web"
     assert body["sources"][0]["section"] == "基于联网搜索"
     assert body["sources"][0]["source_url"] == "https://www.lingshan.com/tickets"
@@ -843,7 +952,7 @@ def test_mimo_weather_search_accepts_common_weather_sources(tmp_path, monkeypatc
     assert body["sources"][0]["source_type"] == "realtime_web"
     assert body["sources"][0]["source_url"].startswith("https://")
     assert "当前景区资料库里没有找到" not in body["answer"]
-    assert "基于联网搜索" in body["answer"]
+    assert "联网搜索" not in body["answer"]
 
 
 def test_structured_fact_does_not_call_realtime_web_search(tmp_path, monkeypatch):
@@ -987,7 +1096,7 @@ def test_realtime_web_search_timeout_fails_gracefully(tmp_path, monkeypatch):
     body = response.json()
     assert body["metrics"]["web_supplement_status"] == "timeout"
     assert all(source["source_type"] != "realtime_web" for source in body["sources"])
-    assert "联网补充" in body["answer"]
+    assert "不能" in body["answer"] or "确认" in body["answer"]
 
 
 def test_low_trust_source_is_ignored_for_high_risk_fact(tmp_path, monkeypatch):
@@ -1074,9 +1183,9 @@ def test_weather_question_uses_realtime_web_without_scenic_entity(tmp_path, monk
         def search(self, query, timeout_seconds):
             return [
                 {
-                    "title": "无锡天气预报",
-                    "snippet": "无锡今天多云，适合关注实时天气预报安排游览。",
-                    "url": "https://www.weather.com.cn/weather/101190201.shtml",
+                    "title": "北京天气预报",
+                    "snippet": "北京今天多云，建议关注实时天气预报安排出行。",
+                    "url": "https://www.weather.com.cn/weather/101010100.shtml",
                     "source_level": "authoritative",
                 }
             ]
@@ -1097,7 +1206,7 @@ def test_weather_question_uses_realtime_web_without_scenic_entity(tmp_path, monk
     )
 
     with TestClient(app) as client:
-        response = client.post("/api/chat", json={"question": "今天无锡天气如何？"})
+        response = client.post("/api/chat", json={"question": "今天北京的天气怎么样？"})
 
     assert response.status_code == 200
     body = response.json()
@@ -1105,8 +1214,10 @@ def test_weather_question_uses_realtime_web_without_scenic_entity(tmp_path, monk
     assert body["metrics"]["classification"]["fact_keys"] == ["weather"]
     assert body["metrics"]["web_supplement_required"] is True
     assert body["metrics"]["web_supplement_status"] == "success"
+    assert body["sources"]
     assert body["sources"][0]["source_type"] == "realtime_web"
-    assert "基于联网搜索" in body["answer"]
+    assert {source["source_type"] for source in body["sources"]} == {"realtime_web"}
+    assert "联网搜索" not in body["answer"]
 
 
 def test_weather_question_without_web_results_does_not_blame_scenic_database(tmp_path, monkeypatch):
@@ -1182,7 +1293,7 @@ def test_realtime_web_answer_is_not_marked_degraded_when_llm_synthesis_fails(tmp
     assert body["mode"] == "web_supplement"
     assert body["degraded"] is False
     assert body["metrics"]["degraded"] is False
-    assert "基于联网搜索" in body["answer"]
+    assert "联网搜索" not in body["answer"]
 
 
 def test_chat_retrieves_sources_from_chinese_question_without_spot_id(tmp_path):
@@ -1223,6 +1334,48 @@ def test_chat_stream_returns_delta_events_and_final_payload(tmp_path):
     assert final["sources"]
     assert final["tts_status"] == "disabled"
     assert final["metrics"]["llm_ms"] >= 0
+
+
+def test_chat_stream_replays_safe_answer_cache_as_delta_events(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_chat_completion_stream(self, model, system_prompt, user_prompt):
+        calls.append(user_prompt)
+        yield "灵山大佛最值得看的，是中轴线尽头的气势。"
+
+    monkeypatch.setattr(
+        "app.services.chat.MimoClient.chat_completion_stream",
+        fake_chat_completion_stream,
+    )
+    db_path = tmp_path / "app.db"
+    app = create_app(
+        Settings(
+            database_url=f"sqlite:///{db_path}",
+            source_package_path=str(SOURCE_PACKAGE_PATH),
+            llm_mode="openai_compatible",
+            llm_api_key="fake-key",
+            tts_mode="disabled",
+            guide_warmup_on_startup="false",
+        )
+    )
+
+    with TestClient(app) as client:
+        for _index in range(2):
+            with client.stream(
+                "POST",
+                "/api/chat/stream",
+                json={"question": "灵山大佛有什么看点？"},
+            ) as response:
+                body = response.read().decode("utf-8")
+            events = _sse_events(body)
+            delta_text = "".join(event["data"]["text"] for event in events if event["event"] == "delta")
+            final = next(event["data"] for event in events if event["event"] == "final")
+
+    assert response.status_code == 200
+    assert len(calls) == 1
+    assert final["answer"] == delta_text
+    assert final["metrics"]["answer_cache_hit"] is True
+    assert final["metrics"]["cache_hit"] is True
 
 
 def test_chat_stream_keeps_model_text_when_provider_raises_after_chunks(tmp_path, monkeypatch):
@@ -1288,6 +1441,136 @@ def test_chat_reuses_existing_session_id(tmp_path):
     assert second["session_id"] == first["session_id"]
     assert "梵宫" in second["answer"]
     assert second["sources"]
+
+
+def test_guide_casual_question_bypasses_rag_sources(tmp_path):
+    with create_test_client(tmp_path) as client:
+        response = client.post("/api/chat", json={"question": "\u4f60\u662f\u8c01"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mode"] == "guide_casual"
+    assert body["sources"] == []
+    assert body["guide_action"] is None
+    assert "\u5f53\u524d\u8d44\u6599\u663e\u793a" not in body["answer"]
+    assert "\u6839\u636e\u8d44\u6599" not in body["answer"]
+    assert "\u666f\u533a AI \u5bfc\u6e38" in body["answer"]
+
+
+def test_guide_casual_uses_mimo_persona_when_available(tmp_path, monkeypatch):
+    def fake_chat_completion(self, model, system_prompt, user_prompt):
+        assert "\u771f\u4eba\u5bfc\u6e38" in system_prompt
+        assert "\u4f60\u662f\u8c01" in user_prompt
+        return "\u6211\u662f\u966a\u4f60\u901b\u666f\u533a\u7684\u6e38\u77e5\u7075\uff0c\u53ef\u4ee5\u8bb2\u6545\u4e8b\u3001\u63d0\u9192\u8282\u594f\uff0c\u4e5f\u80fd\u5728\u4f60\u9700\u8981\u65f6\u5e2e\u4f60\u5b89\u6392\u8def\u7ebf\u3002"
+
+    monkeypatch.setattr(
+        "app.services.chat.MimoClient.chat_completion",
+        fake_chat_completion,
+    )
+    db_path = tmp_path / "app.db"
+    app = create_app(
+        Settings(
+            database_url=f"sqlite:///{db_path}",
+            source_package_path=str(SOURCE_PACKAGE_PATH),
+            llm_mode="openai_compatible",
+            llm_api_key="fake-key",
+            tts_mode="disabled",
+        )
+    )
+
+    with TestClient(app) as client:
+        response = client.post("/api/chat", json={"question": "\u4f60\u662f\u8c01"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mode"] == "guide_casual"
+    assert body["sources"] == []
+    assert body["guide_action"] is None
+    assert "\u6e38\u77e5\u7075" in body["answer"]
+
+
+def test_service_advice_does_not_trigger_route_card(tmp_path):
+    with create_test_client(tmp_path) as client:
+        response = client.post(
+            "/api/chat",
+            json={"question": "\u5e26\u8001\u4eba\u6765\u9700\u8981\u6ce8\u610f\u4ec0\u4e48\uff1f"},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["metrics"]["classification"]["intent"] == "service"
+    assert body["mode"] != "route_recommendation"
+    assert body["guide_action"] is None
+    assert "\u5f53\u524d\u8d44\u6599\u663e\u793a" not in body["answer"]
+    assert "\u6839\u636e\u8d44\u6599" not in body["answer"]
+
+
+def test_guide_route_recommendation_returns_route_action_and_followup(tmp_path):
+    with create_test_client(tmp_path) as client:
+        response = client.post(
+            "/api/chat",
+            json={
+                "question": "\u6211\u662f\u62c8\u82b1\u6e7e\uff0c\u53ef\u6e38\u89c8180\u5206\u949f\uff0c\u6b65\u884c\u5f3a\u5ea6\u9ad8\uff0c\u5174\u8da3\u4f5b\u6559\u6587\u5316\u3001\u5efa\u7b51\u827a\u672f\uff0c\u8bf7\u751f\u6210\u8def\u7ebf",
+                "profile": {
+                    "route_preference": {
+                        "map_id": "nianhua-bay",
+                        "duration_minutes": 180,
+                        "physical_level": "high",
+                        "interest_tags": ["\u4f5b\u6559\u6587\u5316", "\u5efa\u7b51\u827a\u672f"],
+                    }
+                },
+            },
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["mode"] == "route_recommendation"
+        assert body["sources"] == []
+        assert body["guide_action"]["type"] == "route_recommendation"
+        assert body["guide_action"]["route"]["map_id"] == "nianhua-bay"
+        assert body["guide_action"]["preference"]["physical_level"] == "high"
+        assert "\u62c8\u82b1\u6e7e" in body["answer"]
+        assert "\u5f53\u524d\u8d44\u6599\u663e\u793a" not in body["answer"]
+
+        followup = client.post(
+            "/api/chat",
+            json={
+                "session_id": body["session_id"],
+                "question": "\u6362\u6210\u8f7b\u677e\u4e00\u70b9",
+            },
+        )
+
+    assert followup.status_code == 200
+    follow_body = followup.json()
+    assert follow_body["mode"] == "route_recommendation"
+    assert follow_body["guide_action"]["preference"]["physical_level"] == "low"
+    assert follow_body["guide_action"]["route"]["map_id"] == "nianhua-bay"
+
+
+def test_guide_spot_listing_does_not_trigger_route_card(tmp_path):
+    with create_test_client(tmp_path) as client:
+        response = client.post(
+            "/api/chat",
+            json={
+                "question": "\u62c8\u82b1\u6e7e\u6709\u4ec0\u4e48\u666f\u70b9",
+                "profile": {
+                    "route_preference": {
+                        "map_id": "nianhua-bay",
+                        "duration_minutes": 180,
+                        "physical_level": "high",
+                        "interest_tags": ["\u4f5b\u6559\u6587\u5316", "\u5efa\u7b51\u827a\u672f"],
+                    }
+                },
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["mode"] == "guide_scenic_list"
+    assert body["guide_action"] is None
+    assert "\u4e2a\u6027\u5316\u63a8\u8350\u8def\u7ebf" not in body["answer"]
+    assert "\u62c8\u82b1\u5e7f\u573a" in body["answer"]
+    assert "\u666f\u533a\u5165\u53e3" not in body["answer"]
 
 
 def _sse_events(body: str) -> list[dict]:
