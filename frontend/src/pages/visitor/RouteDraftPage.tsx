@@ -328,7 +328,7 @@ export default function RouteDraftPage() {
         <div className={styles.headingActions}>
           <CyberGlitchButton
             variant="ghost"
-            onClick={() => navigate('/routes')}
+            onClick={() => navigate('/routes', { state: { skipHydraLoader: true } })}
           >
             返回推荐
           </CyberGlitchButton>

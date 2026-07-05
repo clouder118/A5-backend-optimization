@@ -8,7 +8,6 @@ import { recommendRoutes } from '../../api/routes';
 import { createTour } from '../../api/tours';
 import type { RoutePlan, RoutePreferenceInput } from '../../types/scenic';
 import {
-  buildPreferenceGuideQuestion,
   defaultVisitorPreference,
   loadVisitorPreference,
   preferenceFromSearchParams,
@@ -20,6 +19,10 @@ import {
   saveRouteRecommendationSession,
 } from '../../utils/visitorSessionState';
 import styles from './RouteRecommendPage.module.css';
+
+interface RouteRecommendLocationState {
+  skipHydraLoader?: boolean;
+}
 
 export default function RouteRecommendPage() {
   const navigate = useNavigate();
@@ -33,7 +36,8 @@ export default function RouteRecommendPage() {
   const [error, setError] = useState('');
   const [creatingRouteId, setCreatingRouteId] = useState('');
   const [startingRouteId, setStartingRouteId] = useState('');
-  const [showHydraLoader, setShowHydraLoader] = useState(true);
+  const shouldSkipHydraLoader = Boolean((location.state as RouteRecommendLocationState | null)?.skipHydraLoader);
+  const [showHydraLoader, setShowHydraLoader] = useState(() => !shouldSkipHydraLoader);
   const [preference, setPreference] = useState<RoutePreferenceInput>(() =>
     initialRouteSession?.preference ?? urlPreference,
   );
@@ -72,15 +76,14 @@ export default function RouteRecommendPage() {
   }, []);
 
   useEffect(() => {
-    setShowHydraLoader(true);
-  }, [location.key]);
+    setShowHydraLoader(!shouldSkipHydraLoader);
+  }, [location.key, shouldSkipHydraLoader]);
 
   const finishHydraLoader = useCallback(() => {
     setShowHydraLoader(false);
   }, []);
 
   const guideParams = preferenceToSearchParams(preference);
-  guideParams.set('question', buildPreferenceGuideQuestion(preference));
   const guideHref = `/guide?${guideParams.toString()}`;
 
   const editRoute = async (route: RoutePlan) => {

@@ -79,8 +79,9 @@ export default function AiGuidePage() {
   const [chatError, setChatError] = useState('');
   const [sessionId, setSessionId] = useState(() => initialGuideSession?.sessionId ?? `guide-session-${Date.now()}`);
   const [introReady, setIntroReady] = useState(() => Boolean(initialGuideSession?.introReady));
-  const [showEntryLoader, setShowEntryLoader] = useState(true);
+  const [entryLoaderState, setEntryLoaderState] = useState(() => ({ key: location.key, visible: true }));
   const handledInitialQuestionKeyRef = useRef(initialGuideSession?.handledInitialQuestionKey);
+  const showEntryLoader = entryLoaderState.visible || entryLoaderState.key !== location.key;
 
   const spotId = searchParams.get('spotId') ?? undefined;
   const spotName = searchParams.get('spotName') ?? undefined;
@@ -98,12 +99,12 @@ export default function AiGuidePage() {
   }, []);
 
   useLayoutEffect(() => {
-    setShowEntryLoader(true);
+    setEntryLoaderState({ key: location.key, visible: true });
   }, [location.key]);
 
   const finishEntryLoader = useCallback(() => {
-    setShowEntryLoader(false);
-  }, []);
+    setEntryLoaderState({ key: location.key, visible: false });
+  }, [location.key]);
 
   useEffect(() => {
     saveVisitorPreference(preference);
@@ -366,6 +367,7 @@ export default function AiGuidePage() {
             showStateBadge
             audioState={audioState}
             emotionCue={emotionCue}
+            enableAvatar={!showEntryLoader}
             stageMode="guide"
             speechText={avatarSpeechText}
             speechNonce={avatarSpeechNonce}

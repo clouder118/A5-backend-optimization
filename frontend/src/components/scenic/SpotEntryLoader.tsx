@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styles from './SpotEntryLoader.module.css';
 
-const DEFAULT_DURATION_MS = 3000;
+const DEFAULT_DURATION_MS = 1500;
 const EXIT_DURATION_MS = 420;
 
 function cx(...classes: Array<string | undefined | false>) {

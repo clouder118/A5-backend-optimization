@@ -251,6 +251,18 @@ export default function HomePage() {
             <div className="luxury-scene-backdrop">
               <img className="luxury-scenic-art" src={heroScenes[0].image} alt="" aria-hidden="true" />
             </div>
+            <div className="luxury-scene-copy">
+              <span className="luxury-eyebrow">{heroScenes[0].eyebrow}</span>
+              <Typography.Title className="luxury-hero-title">
+                <span className="luxury-hero-title-line">{heroScenes[0].title}</span>
+              </Typography.Title>
+              <Typography.Paragraph className="luxury-hero-subtitle">{heroScenes[0].subtitle}</Typography.Paragraph>
+            </div>
+            <div className="luxury-scene-meta">
+              <span>01</span>
+              <i />
+              <span>{heroScenes[0].key.toUpperCase()}</span>
+            </div>
           </section>
         </div>
       </div>

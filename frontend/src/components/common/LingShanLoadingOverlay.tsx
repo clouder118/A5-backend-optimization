@@ -18,7 +18,7 @@ function cx(...classes: Array<string | undefined | false>) {
 
 export default function LingShanLoadingOverlay({
   onComplete,
-  durationMs = 3000,
+  durationMs = 1500,
   className,
   preserveHeader = false,
 }: LingShanLoadingOverlayProps) {
