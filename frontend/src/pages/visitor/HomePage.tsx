@@ -1,14 +1,11 @@
-import { EnvironmentOutlined, MessageOutlined } from '@ant-design/icons';
-import { Button, Typography } from 'antd';
+import { Typography } from 'antd';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 import Snap from 'lenis/snap';
 import { useEffect, useRef } from 'react';
 import type { CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
 import AvatarGuide from '../../components/guide/AvatarGuide';
-import { useVisitorAuth } from '../../utils/visitorAuthContext';
 
 type HeroTuning = {
   titleLines?: string[];
@@ -93,7 +90,6 @@ function getHeroStyle(tuning?: HeroTuning): CSSProperties | undefined {
 export default function HomePage() {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const { user } = useVisitorAuth();
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -281,36 +277,6 @@ export default function HomePage() {
         </div>
 
         <div className="video-scroll-hint">[SCROLL DOWN]</div>
-
-        <div className="luxury-quick-links">
-          {user ? (
-            <>
-              <Link to="/guide">
-                <Button type="primary" icon={<MessageOutlined />} data-cue="[ GUIDE ]">
-                  [ GUIDE ]
-                </Button>
-              </Link>
-              <Link to="/spots">
-                <Button icon={<EnvironmentOutlined />} data-cue="[ SPOTS ]">
-                  [ SPOTS ]
-                </Button>
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link to="/login">
-                <Button type="primary" icon={<MessageOutlined />} data-cue="[ LOGIN ]">
-                  [ LOGIN TO EXPLORE ]
-                </Button>
-              </Link>
-              <Link to="/register">
-                <Button icon={<EnvironmentOutlined />} data-cue="[ REGISTER ]">
-                  [ CREATE ACCOUNT ]
-                </Button>
-              </Link>
-            </>
-          )}
-        </div>
       </div>
     </div>
   );

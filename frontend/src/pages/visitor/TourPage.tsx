@@ -127,10 +127,6 @@ export default function TourPage() {
           <Typography.Title level={1}>{tour.name}</Typography.Title>
         </div>
         <div className={styles.headingActions}>
-          <Tag color={tour.status === 'finished' ? 'green' : 'gold'}>
-            {tour.status === 'finished' ? '已结束' : '游览中'}
-          </Tag>
-          <Tag color="geekblue">人工路网最短路径</Tag>
           <CyberCornerButton
             variant="secondary"
             onClick={() => navigate(`/route-drafts/${tour.routeDraftId}`)}
@@ -166,6 +162,9 @@ export default function TourPage() {
             routePath={routePath}
             completedSpotIds={completedSpotIds}
             activeSpotId={currentSpot?.spotId}
+            fitToContainer
+            panEnabled
+            fitScale={2}
           />
         </section>
 

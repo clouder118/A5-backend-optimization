@@ -403,6 +403,9 @@ export default function RouteDraftPage() {
             routeSpotIds={currentMapRouteSpotIds}
             routePath={routePath}
             activeSpotId={activeSpotId}
+            fitToContainer
+            panEnabled
+            fitScale={2}
             onSpotActivate={setActiveSpotId}
             onSpotPreview={setActiveSpotId}
           />

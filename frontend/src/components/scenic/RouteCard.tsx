@@ -77,7 +77,6 @@ export default function RouteCard({
   return (
     <Card
       className="route-card"
-      data-cue="[ ROUTE ]"
       title={route.name}
       extra={
         <Tag color="green" icon={<EnvironmentOutlined />}>

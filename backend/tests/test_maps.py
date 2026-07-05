@@ -66,7 +66,7 @@ def test_get_nianhua_bay_map_returns_second_versioned_asset(tmp_path):
     assert response.status_code == 200
     body = response.json()
     assert body["id"] == "nianhua-bay"
-    assert body["name"] == "拈花湾禅意小镇建筑参照图"
+    assert body["name"] == "拈花湾禅意小镇"
     assert body["version"] == "nianhua-bay-overview-v1"
     assert body["image_url"] == "/scenic/maps/nianhua-bay-overview-v1.png"
     assert body["width"] == 941

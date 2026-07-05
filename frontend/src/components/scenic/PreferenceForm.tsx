@@ -67,7 +67,7 @@ export default function PreferenceForm({
             </Radio.Group>
           </Form.Item>
           <Form.Item<RoutePreferenceInput> name="durationMinutes" label="可游览时间">
-            <Select options={durationOptions} />
+            <Select popupClassName="route-duration-dropdown" options={durationOptions} />
           </Form.Item>
           <Form.Item<RoutePreferenceInput> name="physicalLevel" label="步行强度">
             <Radio.Group>

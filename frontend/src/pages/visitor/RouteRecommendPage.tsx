@@ -129,7 +129,7 @@ export default function RouteRecommendPage() {
 
           <section className={styles.results} data-testid="route-workbench-stage">
             {loading ? (
-              <div className={styles.statusPanel} role="status">
+              <div className={`${styles.statusPanel} ${styles.loadingStatus}`} role="status">
                 <span className={styles.statusKicker}>ROUTE ENGINE</span>
                 <strong>正在生成路线</strong>
                 <p>系统正在计算点位顺序、步行时间和地图路径。</p>

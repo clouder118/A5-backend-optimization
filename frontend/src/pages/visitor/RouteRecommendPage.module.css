@@ -150,6 +150,11 @@
   box-shadow: 0 0 18px rgba(156, 50, 48, 0.22);
 }
 
+.loadingStatus {
+  justify-items: center;
+  text-align: center;
+}
+
 .statusPanel::before {
   position: absolute;
   right: -6px;
@@ -167,6 +172,10 @@
   letter-spacing: 0.035em;
   line-height: 1;
   text-transform: uppercase;
+}
+
+.loadingStatus strong {
+  font-size: 50px;
 }
 
 .statusPanel p {
@@ -194,6 +203,16 @@
   font-size: 22px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+}
+
+.loadingStatus .statusKicker {
+  font-size: 35px;
+}
+
+.loadingStatus p {
+  max-width: none;
+  font-size: 29px;
+  white-space: nowrap;
 }
 
 .srOnly {
@@ -292,6 +311,33 @@
 
 .page :global(.preference-card .ant-select-selection-item) {
   color: var(--route-cyber-tertiary-500);
+}
+
+:global(.route-duration-dropdown.ant-select-dropdown) {
+  color: #f4908b;
+  background:
+    linear-gradient(180deg, rgba(30, 24, 30, 0.98), rgba(25, 26, 30, 0.98)),
+    #1e181e;
+  border: 1px solid rgba(232, 97, 90, 0.78);
+  border-radius: 2px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.48), 0 0 14px rgba(232, 97, 90, 0.24);
+}
+
+:global(.route-duration-dropdown .ant-select-item) {
+  color: #f4908b !important;
+  font-family: "RouteCyberRajdhani", "Microsoft YaHei", sans-serif;
+  font-size: 16px;
+  background: transparent !important;
+}
+
+:global(.route-duration-dropdown .ant-select-item-option-active) {
+  color: #2be4ea !important;
+  background: rgba(43, 228, 234, 0.12) !important;
+}
+
+:global(.route-duration-dropdown .ant-select-item-option-selected) {
+  color: #fed33f !important;
+  background: rgba(254, 211, 63, 0.14) !important;
 }
 
 .page :global(.preference-card .ant-checkbox-wrapper) {

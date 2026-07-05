@@ -105,7 +105,7 @@ const nianhuaBayFallbackPoints: ScenicMapPoint[] = [
 const fallbackMaps: Record<ScenicMapId, ScenicMap> = {
   'ling-shan': {
     id: 'ling-shan',
-    name: '灵山胜境建筑参照图',
+    name: '灵山胜境',
     imageUrl: '/scenic/maps/ling-shan-overview-v1.webp',
     version: 'ling-shan-overview-v1',
     width: 941,
@@ -119,7 +119,7 @@ const fallbackMaps: Record<ScenicMapId, ScenicMap> = {
   },
   'nianhua-bay': {
     id: 'nianhua-bay',
-    name: '拈花湾禅意小镇建筑参照图',
+    name: '拈花湾禅意小镇',
     imageUrl: '/scenic/maps/nianhua-bay-overview-v1.png',
     version: 'nianhua-bay-overview-v1',
     width: 941,

@@ -217,7 +217,7 @@ export default function RouteMapWorkbench({
             />
           </>
         ) : (
-          <div className={styles.loading}>正在加载建筑参照图</div>
+          <div className={styles.loading} />
         )}
       </main>
       <aside className={styles.rightRail} aria-label="路线地图信息">
