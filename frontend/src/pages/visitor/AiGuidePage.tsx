@@ -24,6 +24,7 @@ import {
 } from '../../utils/visitorProfile';
 import {
   loadGuideChatSession,
+  saveRouteEntrySession,
   saveGuideChatSession,
   saveRouteMapSession,
   saveRouteRecommendationSession,
@@ -313,7 +314,13 @@ export default function AiGuidePage() {
       });
     }
     const params = preferenceToSearchParams(nextPreference);
-    navigate(`/routes?${params.toString()}`);
+    const path = `/routes?${params.toString()}`;
+    saveRouteEntrySession({
+      mode: 'recommendation',
+      path,
+      skipHydraLoader: true,
+    });
+    navigate(path, { state: { skipHydraLoader: true } });
   };
 
   const editRouteFromMessage = async (message: ChatMessage) => {
@@ -324,6 +331,10 @@ export default function AiGuidePage() {
       const draft = await createRouteDraft(message.routePlan, {
         ...routePreference,
         mapId: message.routePlan.mapId,
+      });
+      saveRouteEntrySession({
+        mode: 'draft',
+        path: `/route-drafts/${draft.id}`,
       });
       navigate(`/route-drafts/${draft.id}`);
     } catch {
@@ -342,6 +353,10 @@ export default function AiGuidePage() {
         mapId: message.routePlan.mapId,
       });
       const tour = await createTour(draft.id, message.routePlan.mapId);
+      saveRouteEntrySession({
+        mode: 'tour',
+        path: `/tour/${tour.id}`,
+      });
       navigate(`/tour/${tour.id}`);
     } catch {
       setChatError('开始游览失败，请稍后重试。');
@@ -412,7 +427,7 @@ export default function AiGuidePage() {
         <GuideQuickPrompts prompts={quickPrompts} disabled={loading || !introReady} onSelect={sendPresetQuestion} />
       </div>
       </div>
-      {showEntryLoader ? <GuideEntryLoader preserveHeader onComplete={finishEntryLoader} /> : null}
+      {showEntryLoader ? <GuideEntryLoader preserveHeader durationMs={1800} onComplete={finishEntryLoader} /> : null}
     </>
   );
 }

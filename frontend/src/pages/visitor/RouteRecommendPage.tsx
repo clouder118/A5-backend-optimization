@@ -16,6 +16,7 @@ import {
 } from '../../utils/visitorProfile';
 import {
   loadRouteRecommendationSession,
+  saveRouteEntrySession,
   saveRouteRecommendationSession,
 } from '../../utils/visitorSessionState';
 import styles from './RouteRecommendPage.module.css';
@@ -108,6 +109,10 @@ export default function RouteRecommendPage() {
         mapId: route.mapId,
       });
       const tour = await createTour(draft.id, route.mapId);
+      saveRouteEntrySession({
+        mode: 'tour',
+        path: `/tour/${tour.id}`,
+      });
       navigate(`/tour/${tour.id}`);
     } catch {
       setError('开始游览失败，请稍后重试。');

@@ -19,6 +19,7 @@
     "verify:admin-login": "node scripts/verify-admin-login-flow.mjs",
     "verify:admin-api-auth": "node scripts/verify-admin-api-auth.mjs",
     "verify:login-responsive": "node scripts/verify-login-responsive-polish.mjs",
+    "verify:route-guide-continuity": "node scripts/verify-route-guide-continuity.mjs",
     "verify:avatar151": "node scripts/verify-avatar151.mjs",
     "verify:avatar151-motions": "node scripts/verify-avatar151-motions.mjs",
     "verify:avatar-runtime": "node scripts/verify-avatar-runtime-config.mjs",

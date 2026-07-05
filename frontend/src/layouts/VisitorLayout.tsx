@@ -8,7 +8,7 @@ import LingShanLoadingOverlay from '../components/common/LingShanLoadingOverlay'
 import { productCopy } from '../config/product';
 import type { AuthUser } from '../types/api';
 import { VisitorAuthContext } from '../utils/visitorAuthContext';
-import { clearVisitorSessionState } from '../utils/visitorSessionState';
+import { clearVisitorSessionState, loadRouteEntrySession } from '../utils/visitorSessionState';
 
 const guestNavItems: MenuProps['items'] = [{ key: '/', label: <Link to="/">[ 首页 ]</Link> }];
 const HOME_TRANSITION_NAVIGATION_DELAY_MS = 280;
@@ -45,16 +45,26 @@ export default function VisitorLayout() {
     event.preventDefault();
     setHomeLoaderMode('pre-navigation');
   }, [homeLoaderMode, isSignedIn, location.pathname]);
+  const routeEntry = loadRouteEntrySession();
+  const shouldResetRouteEntry =
+    routeEntry?.mode !== 'tour' && (location.pathname === '/' || location.pathname.startsWith('/spots'));
+  const routeNavPath = shouldResetRouteEntry ? '/routes' : routeEntry?.path ?? '/routes';
+  const routeNavState = location.pathname === '/guide' && routeEntry?.skipHydraLoader && routeNavPath.startsWith('/routes')
+    ? { skipHydraLoader: true }
+    : undefined;
   const visitorNavItems = useMemo<MenuProps['items']>(() => [
     { key: '/', label: <Link to="/" onClick={handleHomeNavigation}>[ 首页 ]</Link> },
     { key: '/spots', label: <Link to="/spots">[ 景点 ]</Link> },
-    { key: '/routes', label: <Link to="/routes">[ 路线 ]</Link> },
+    { key: '/routes', label: <Link to={routeNavPath} state={routeNavState}>[ 路线 ]</Link> },
     { key: '/guide', label: <Link to="/guide">[ 导游 ]</Link> },
-  ], [handleHomeNavigation]);
+  ], [handleHomeNavigation, routeNavPath, routeNavState]);
   const navItems = isSignedIn ? visitorNavItems : guestNavItems;
   const selectedKey =
     navItems?.find((item) => typeof item?.key === 'string' && location.pathname === item.key)?.key?.toString() ||
-    (location.pathname.startsWith('/spots') ? '/spots' : '/');
+    (location.pathname.startsWith('/spots') ? '/spots' : '') ||
+    (location.pathname === '/routes' || location.pathname.startsWith('/route-drafts/') || location.pathname.startsWith('/tour/')
+      ? '/routes'
+      : '/');
 
   useEffect(() => {
     let cancelled = false;

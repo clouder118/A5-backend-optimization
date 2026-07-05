@@ -36,6 +36,7 @@ import { CyberCornerButton, CyberGlitchButton } from '../../components/common/Cy
 import ScenicPointMap from '../../components/scenic/ScenicPointMap';
 import useScenicRoutePath from '../../hooks/useScenicRoutePath';
 import type { RouteDraft, ScenicMap, ScenicSpot } from '../../types/scenic';
+import { saveRouteEntrySession } from '../../utils/visitorSessionState';
 import styles from './RouteDraftPage.module.css';
 
 const mapOptions: Array<{ id: ScenicMapId; label: string }> = [
@@ -68,6 +69,10 @@ export default function RouteDraftPage() {
     Promise.all([getRouteDraft(draftId), getSpots()])
       .then(([draftResult, spotResult]) => {
         if (!active) return;
+        saveRouteEntrySession({
+          mode: 'draft',
+          path: `/route-drafts/${draftResult.id}`,
+        });
         setDraft(draftResult);
         setSpots(spotResult);
         setActiveMapId(
@@ -304,6 +309,10 @@ export default function RouteDraftPage() {
           : await scopeRouteDraft(draft.id, activeMapId);
       applyDraft(scopedDraft, activeMapId);
       const tour = await createTour(scopedDraft.id, activeMapId);
+      saveRouteEntrySession({
+        mode: 'tour',
+        path: `/tour/${tour.id}`,
+      });
       navigate(`/tour/${tour.id}`);
     } catch {
       message.error('开始游览失败，请稍后重试。');

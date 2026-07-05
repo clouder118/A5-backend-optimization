@@ -14,6 +14,7 @@ import ScenicPointMap from '../../components/scenic/ScenicPointMap';
 import useScenicRoutePath from '../../hooks/useScenicRoutePath';
 import type { ScenicMap, TourSession } from '../../types/scenic';
 import { loadTourRecovery, saveTourRecovery } from '../../utils/tourRecovery';
+import { saveRouteEntrySession } from '../../utils/visitorSessionState';
 import styles from './TourPage.module.css';
 
 export default function TourPage() {
@@ -90,6 +91,25 @@ export default function TourPage() {
   const progress = tour?.spots.length
     ? Math.round((completedCount / tour.spots.length) * 100)
     : 0;
+  const isTourComplete = Boolean(
+    tour && (tour.status !== 'active' || completedCount >= tour.spots.length || !currentSpot),
+  );
+
+  useEffect(() => {
+    if (!tour) return;
+    saveRouteEntrySession(
+      isTourComplete
+        ? {
+            mode: 'recommendation',
+            path: '/routes',
+            skipHydraLoader: true,
+          }
+        : {
+            mode: 'tour',
+            path: `/tour/${tour.id}`,
+          },
+    );
+  }, [isTourComplete, tour]);
 
   const runEvent = async (
     eventType: 'spot_arrived' | 'spot_completed' | 'spot_skipped' | 'tour_finished',

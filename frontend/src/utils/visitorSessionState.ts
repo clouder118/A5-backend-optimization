@@ -4,6 +4,7 @@ const STORAGE_PREFIX = 'a5-visitor-login-session:';
 const GUIDE_CHAT_KEY = `${STORAGE_PREFIX}guide-chat`;
 const ROUTE_RECOMMENDATION_KEY = `${STORAGE_PREFIX}route-recommendation`;
 const ROUTE_MAP_KEY = `${STORAGE_PREFIX}route-map`;
+const ROUTE_ENTRY_KEY = `${STORAGE_PREFIX}route-entry`;
 
 export interface GuideChatSessionState {
   messages: ChatMessage[];
@@ -22,6 +23,13 @@ export interface RouteMapSessionState {
   activeMapId?: RoutePreferenceInput['mapId'];
   activeRouteId?: string;
   activeSpotId?: string;
+  savedAt: number;
+}
+
+export interface RouteEntrySessionState {
+  mode: 'recommendation' | 'draft' | 'tour';
+  path: string;
+  skipHydraLoader?: boolean;
   savedAt: number;
 }
 
@@ -60,6 +68,17 @@ export function loadRouteMapSession(): RouteMapSessionState | undefined {
 
 export function saveRouteMapSession(state: Omit<RouteMapSessionState, 'savedAt'>): void {
   writeSessionValue(ROUTE_MAP_KEY, {
+    ...state,
+    savedAt: Date.now(),
+  });
+}
+
+export function loadRouteEntrySession(): RouteEntrySessionState | undefined {
+  return readSessionValue<RouteEntrySessionState>(ROUTE_ENTRY_KEY, isRouteEntrySessionState);
+}
+
+export function saveRouteEntrySession(state: Omit<RouteEntrySessionState, 'savedAt'>): void {
+  writeSessionValue(ROUTE_ENTRY_KEY, {
     ...state,
     savedAt: Date.now(),
   });
@@ -126,4 +145,18 @@ function isRouteRecommendationSessionState(value: unknown): value is RouteRecomm
 function isRouteMapSessionState(value: unknown): value is RouteMapSessionState {
   const candidate = value as RouteMapSessionState;
   return Boolean(candidate) && typeof candidate.savedAt === 'number';
+}
+
+function isRouteEntrySessionState(value: unknown): value is RouteEntrySessionState {
+  const candidate = value as RouteEntrySessionState;
+  const isRecommendationPath = candidate?.mode === 'recommendation' && candidate.path.startsWith('/routes');
+  const isDraftPath = candidate?.mode === 'draft' && candidate.path.startsWith('/route-drafts/');
+  const isTourPath = candidate?.mode === 'tour' && candidate.path.startsWith('/tour/');
+  return (
+    Boolean(candidate) &&
+    (candidate.mode === 'recommendation' || candidate.mode === 'draft' || candidate.mode === 'tour') &&
+    typeof candidate.path === 'string' &&
+    (isRecommendationPath || isDraftPath || isTourPath) &&
+    typeof candidate.savedAt === 'number'
+  );
 }

@@ -1,0 +1,112 @@
+{
+  "hash": "75768928",
+  "configHash": "213b0f0a",
+  "lockfileHash": "904b0c21",
+  "browserHash": "51ce7abd",
+  "optimized": {
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "5102c98d",
+      "needsInterop": true
+    },
+    "react-dom": {
+      "src": "../../node_modules/react-dom/index.js",
+      "file": "react-dom.js",
+      "fileHash": "8185d01c",
+      "needsInterop": true
+    },
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "1ac77f80",
+      "needsInterop": true
+    },
+    "react/jsx-runtime": {
+      "src": "../../node_modules/react/jsx-runtime.js",
+      "file": "react_jsx-runtime.js",
+      "fileHash": "2d1ba742",
+      "needsInterop": true
+    },
+    "@ant-design/charts": {
+      "src": "../../node_modules/@ant-design/charts/es/index.js",
+      "file": "@ant-design_charts.js",
+      "fileHash": "6410fb00",
+      "needsInterop": false
+    },
+    "@ant-design/icons": {
+      "src": "../../node_modules/@ant-design/icons/es/index.js",
+      "file": "@ant-design_icons.js",
+      "fileHash": "8cf7675a",
+      "needsInterop": false
+    },
+    "antd": {
+      "src": "../../node_modules/antd/es/index.js",
+      "file": "antd.js",
+      "fileHash": "ae45dc0d",
+      "needsInterop": false
+    },
+    "gsap": {
+      "src": "../../node_modules/gsap/index.js",
+      "file": "gsap.js",
+      "fileHash": "5a69524d",
+      "needsInterop": false
+    },
+    "gsap/ScrollTrigger": {
+      "src": "../../node_modules/gsap/ScrollTrigger.js",
+      "file": "gsap_ScrollTrigger.js",
+      "fileHash": "d417afff",
+      "needsInterop": false
+    },
+    "lenis": {
+      "src": "../../node_modules/lenis/dist/lenis.mjs",
+      "file": "lenis.js",
+      "fileHash": "ae03b2a6",
+      "needsInterop": false
+    },
+    "lenis/snap": {
+      "src": "../../node_modules/lenis/dist/lenis-snap.mjs",
+      "file": "lenis_snap.js",
+      "fileHash": "47b0f9b9",
+      "needsInterop": false
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "c1555486",
+      "needsInterop": true
+    },
+    "react-router-dom": {
+      "src": "../../node_modules/react-router-dom/dist/index.mjs",
+      "file": "react-router-dom.js",
+      "fileHash": "244b826e",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "render18-MYUO4MOQ": {
+      "file": "render18-MYUO4MOQ.js"
+    },
+    "render16-ZUJX4BOH": {
+      "file": "render16-ZUJX4BOH.js"
+    },
+    "chunk-Z5EQ2RHI": {
+      "file": "chunk-Z5EQ2RHI.js"
+    },
+    "chunk-GC3RDLCK": {
+      "file": "chunk-GC3RDLCK.js"
+    },
+    "chunk-SNQQJVHX": {
+      "file": "chunk-SNQQJVHX.js"
+    },
+    "chunk-AS5N7ZIL": {
+      "file": "chunk-AS5N7ZIL.js"
+    },
+    "chunk-ODB75UNA": {
+      "file": "chunk-ODB75UNA.js"
+    },
+    "chunk-DWA4UIM3": {
+      "file": "chunk-DWA4UIM3.js"
+    }
+  }
+}
