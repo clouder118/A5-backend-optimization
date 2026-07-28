@@ -10,8 +10,10 @@ $Backend = Join-Path $Root "backend"
 $Frontend = Join-Path $Root "frontend"
 $BackendLog = Join-Path $Backend "backend-local-server-8001.log"
 $BackendErr = Join-Path $Backend "backend-local-server-8001.err.log"
-$FrontendLog = Join-Path $Frontend "frontend-local-server-5173.log"
-$FrontendErr = Join-Path $Frontend "frontend-local-server-5173.err.log"
+$VisitorLog = Join-Path $Frontend "frontend-local-server-5173.log"
+$VisitorErr = Join-Path $Frontend "frontend-local-server-5173.err.log"
+$AdminLog = Join-Path $Frontend "frontend-local-server-5174.log"
+$AdminErr = Join-Path $Frontend "frontend-local-server-5174.err.log"
 $VenvDir = Join-Path $Backend ".venv"
 $VenvPython = Join-Path $VenvDir "Scripts\python.exe"
 $FrontendDist = Join-Path $Frontend "dist\index.html"
@@ -187,14 +189,21 @@ function Start-Backend {
 }
 
 function Start-Frontend {
-  Write-Step "[6/7] Starting static frontend http://127.0.0.1:5173"
-  if (Test-Path $FrontendLog) { Clear-Content -LiteralPath $FrontendLog }
-  if (Test-Path $FrontendErr) { Clear-Content -LiteralPath $FrontendErr }
+  Write-Step "[6/7] Starting static frontends"
+  if (Test-Path $VisitorLog) { Clear-Content -LiteralPath $VisitorLog }
+  if (Test-Path $VisitorErr) { Clear-Content -LiteralPath $VisitorErr }
+  if (Test-Path $AdminLog) { Clear-Content -LiteralPath $AdminLog }
+  if (Test-Path $AdminErr) { Clear-Content -LiteralPath $AdminErr }
   Start-BackgroundCommand `
     -WorkingDirectory $Frontend `
-    -Command "npm.cmd run preview" `
-    -StdoutPath $FrontendLog `
-    -StderrPath $FrontendErr
+    -Command "cmd /d /c set FRONTEND_PORT=5173&& node ..\scripts\serve-frontend-static.mjs" `
+    -StdoutPath $VisitorLog `
+    -StderrPath $VisitorErr
+  Start-BackgroundCommand `
+    -WorkingDirectory $Frontend `
+    -Command "cmd /d /c set FRONTEND_PORT=5174&& node ..\scripts\serve-frontend-static.mjs" `
+    -StdoutPath $AdminLog `
+    -StderrPath $AdminErr
 }
 
 function Start-BackgroundCommand {
@@ -267,20 +276,22 @@ try {
   Write-Step "[7/7] Waiting for services"
   $backendReady = Wait-Url "http://127.0.0.1:8001/health" 30
   $frontendReady = Wait-Url "http://127.0.0.1:5173/" 30
+  $adminReady = Wait-Url "http://127.0.0.1:5174/" 30
 
   Write-Host ""
-  if ($backendReady -and $frontendReady) {
+  if ($backendReady -and $frontendReady -and $adminReady) {
     Write-Host "Started successfully." -ForegroundColor Green
   } else {
     Write-Host "Services may still be starting. Refresh the browser after a moment." -ForegroundColor Yellow
   }
   Write-Host "Visitor: http://127.0.0.1:5173/"
   Write-Host "AI Guide: http://127.0.0.1:5173/guide"
-  Write-Host "Admin: http://127.0.0.1:5173/admin"
+  Write-Host "Admin: http://127.0.0.1:5174/"
   Write-Host "Backend docs: http://127.0.0.1:8001/docs"
   Write-Host ""
   Write-Host "Backend log: backend\backend-local-server-8001.log"
-  Write-Host "Frontend log: frontend\frontend-local-server-5173.log"
+  Write-Host "Visitor log: frontend\frontend-local-server-5173.log"
+  Write-Host "Admin log: frontend\frontend-local-server-5174.log"
   Write-Host "Mode: static preview, no Vite hot reload."
   Write-Host "After code changes: run BUILD-FRONTEND.bat, then START-HERE.bat."
 

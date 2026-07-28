@@ -1,6 +1,7 @@
 import { requestJson, toApiError } from './client';
 import { API_BASE_URL, USE_MOCK_API } from './config';
 import { mockChatAnswers } from './mock/visitorData';
+import { toRoutePlan } from './routes';
 import type { ChatRequest, ChatResponse } from '../types/scenic';
 
 const wait = (ms = 520) => new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -47,6 +48,8 @@ interface BackendChatResponse {
   tts_status: string;
   mode: string;
   degraded: boolean;
+  guide_action?: BackendGuideAction | null;
+  emotion_cue?: string;
   metrics?: {
     retrieval_ms: number;
     llm_ms: number;
@@ -54,7 +57,31 @@ interface BackendChatResponse {
     total_ms: number;
     cache_hit: boolean;
     degraded: boolean;
+    guide_intent?: string;
+    evidence_profile?: string;
+    route_triggered?: boolean;
+    answer_style?: string;
+    llm_model?: string;
+    embedding_model?: string;
+    first_delta_ms?: number;
+    retrieval_cache_hit?: boolean;
+    answer_cache_hit?: boolean;
+    embedding_cache_hit?: boolean;
+    warmup_status?: string;
   };
+}
+
+interface BackendGuideAction {
+  type: string;
+  title?: string;
+  route?: unknown;
+  preference?: {
+    map_id?: 'ling-shan' | 'nianhua-bay';
+    duration_minutes?: number;
+    physical_level?: 'low' | 'medium' | 'high';
+    interest_tags?: string[];
+    accessible_required?: boolean;
+  } | null;
 }
 
 interface StreamChatOptions {
@@ -66,15 +93,84 @@ function toBackendChatRequest(input: ChatRequest) {
     question: input.question,
     spot_id: input.spotId,
     session_id: input.sessionId,
+    image: input.image
+      ? {
+          mime_type: input.image.mimeType,
+          size_bytes: input.image.sizeBytes,
+          data_url: input.image.dataUrl,
+        }
+      : undefined,
     profile: {
-      visitor_type: input.visitorType,
       preference: input.preference,
+      route_preference: input.routePreference
+        ? {
+            map_id: input.routePreference.mapId,
+            duration_minutes: input.routePreference.durationMinutes,
+            physical_level: input.routePreference.physicalLevel,
+            interest_tags: input.routePreference.interestTags,
+          }
+        : undefined,
+      route_context: input.routeContext ? toBackendRouteContext(input.routeContext) : undefined,
+      guide_mode: input.guideMode
+        ? {
+            style: input.guideMode.style,
+            duration: input.guideMode.duration,
+          }
+        : undefined,
       current_spot_name: input.currentSpotName,
     },
   };
 }
 
+function toBackendRouteContext(context: NonNullable<ChatRequest['routeContext']>) {
+  return {
+    map_id: context.mapId,
+    scenic_name: context.scenicName,
+    route_id: context.routeId,
+    draft_id: context.draftId,
+    tour_id: context.tourId,
+    route_name: context.routeName,
+    total_minutes: context.totalMinutes,
+    current_index: context.currentIndex,
+    current_spot: context.currentSpot ? toBackendRouteContextSpot(context.currentSpot) : undefined,
+    next_spot: context.nextSpot ? toBackendRouteContextSpot(context.nextSpot) : undefined,
+    ordered_spots: context.orderedSpots.map(toBackendRouteContextSpot),
+    location_assist: context.locationAssist
+      ? {
+          mode: context.locationAssist.mode,
+          status: context.locationAssist.status,
+          accuracy_meters: context.locationAssist.accuracyMeters,
+          display_spot_id: context.locationAssist.displaySpotId,
+          updated_at: context.locationAssist.updatedAt,
+        }
+      : undefined,
+    preference: context.preference
+      ? {
+          map_id: context.preference.mapId,
+          duration_minutes: context.preference.durationMinutes,
+          physical_level: context.preference.physicalLevel,
+          interest_tags: context.preference.interestTags,
+        }
+      : undefined,
+    status: context.status,
+  };
+}
+
+function toBackendRouteContextSpot(spot: NonNullable<ChatRequest['routeContext']>['orderedSpots'][number]) {
+  return {
+    spot_id: spot.spotId,
+    name: spot.name,
+    stay_minutes: spot.stayMinutes,
+    transition_minutes: spot.transitionMinutes,
+    transition_note: spot.transitionNote,
+    sequence: spot.sequence,
+    status: spot.status,
+    reason: spot.reason,
+  };
+}
+
 function toChatResponse(response: BackendChatResponse): ChatResponse {
+  const guideAction = toGuideAction(response.guide_action);
   return {
     answer: response.answer,
     sources: response.sources.map((source, index) => ({
@@ -92,6 +188,8 @@ function toChatResponse(response: BackendChatResponse): ChatResponse {
     ttsStatus: response.tts_status as ChatResponse['ttsStatus'],
     sessionId: response.session_id,
     isFallback: response.degraded || response.mode === 'fallback',
+    guideAction,
+    emotionCue: response.emotion_cue,
     metrics: response.metrics
       ? {
           retrievalMs: response.metrics.retrieval_ms,
@@ -100,6 +198,33 @@ function toChatResponse(response: BackendChatResponse): ChatResponse {
           totalMs: response.metrics.total_ms,
           cacheHit: response.metrics.cache_hit,
           degraded: response.metrics.degraded,
+          guideIntent: response.metrics.guide_intent,
+          evidenceProfile: response.metrics.evidence_profile,
+          routeTriggered: response.metrics.route_triggered,
+          answerStyle: response.metrics.answer_style,
+          firstDeltaMs: response.metrics.first_delta_ms,
+          retrievalCacheHit: response.metrics.retrieval_cache_hit,
+          answerCacheHit: response.metrics.answer_cache_hit,
+          embeddingCacheHit: response.metrics.embedding_cache_hit,
+          warmupStatus: response.metrics.warmup_status,
+        }
+      : undefined,
+  };
+}
+
+function toGuideAction(action?: BackendGuideAction | null): ChatResponse['guideAction'] {
+  if (!action) return undefined;
+  const isRouteAction = action.type === 'route_recommendation';
+  return {
+    type: action.type,
+    title: action.title,
+    route: isRouteAction && action.route ? toRoutePlan(action.route as any) : undefined,
+    preference: isRouteAction && action.preference
+      ? {
+          mapId: action.preference.map_id ?? 'ling-shan',
+          durationMinutes: action.preference.duration_minutes ?? 120,
+          physicalLevel: action.preference.physical_level ?? 'medium',
+          interestTags: action.preference.interest_tags ?? [],
         }
       : undefined,
   };

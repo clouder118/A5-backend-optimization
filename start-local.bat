@@ -9,8 +9,10 @@ set "PYTHON=%BACKEND%\.venv\Scripts\python.exe"
 set "DIST=%FRONTEND%\dist\index.html"
 set "BACKEND_LOG=%BACKEND%\backend-local-server-8001.log"
 set "BACKEND_ERR=%BACKEND%\backend-local-server-8001.err.log"
-set "FRONTEND_LOG=%FRONTEND%\frontend-local-server-5173.log"
-set "FRONTEND_ERR=%FRONTEND%\frontend-local-server-5173.err.log"
+set "VISITOR_LOG=%FRONTEND%\frontend-local-server-5173.log"
+set "VISITOR_ERR=%FRONTEND%\frontend-local-server-5173.err.log"
+set "ADMIN_LOG=%FRONTEND%\frontend-local-server-5174.log"
+set "ADMIN_ERR=%FRONTEND%\frontend-local-server-5174.err.log"
 
 echo A5 AI Guide P2 stable launcher
 echo Project root: %ROOT%
@@ -20,6 +22,16 @@ if not exist "%PYTHON%" (
   echo Start failed: backend virtual environment was not found.
   echo Missing: %PYTHON%
   echo Please create backend\.venv or run dependency setup first.
+  if /I not "%~1"=="nopause" pause
+  exit /b 1
+)
+
+"%PYTHON%" -c "import sys; raise SystemExit(0 if (3, 10) <= sys.version_info[:2] < (3, 14) else 1)" >nul 2>nul
+if errorlevel 1 (
+  echo Start failed: backend virtual environment is using an unsupported Python version.
+  echo Current venv: %PYTHON%
+  echo Please recreate backend\.venv with Python 3.11 or 3.12, then run init script again.
+  echo Python 3.14 is not supported by the pinned backend dependencies.
   if /I not "%~1"=="nopause" pause
   exit /b 1
 )
@@ -42,16 +54,21 @@ break > "%BACKEND_LOG%"
 break > "%BACKEND_ERR%"
 start "a5-backend-8001" /min cmd /d /c call "%ROOT%scripts\run-backend-stable.cmd"
 
-echo Starting static frontend: http://127.0.0.1:5173
-break > "%FRONTEND_LOG%"
-break > "%FRONTEND_ERR%"
-start "a5-frontend-5173" /min cmd /d /c call "%ROOT%scripts\run-frontend-stable.cmd"
+echo Starting visitor frontend: http://127.0.0.1:5173
+break > "%VISITOR_LOG%"
+break > "%VISITOR_ERR%"
+start "a5-visitor-5173" /min cmd /d /c call "%ROOT%scripts\run-frontend-stable.cmd" 5173
+
+echo Starting admin frontend: http://127.0.0.1:5174
+break > "%ADMIN_LOG%"
+break > "%ADMIN_ERR%"
+start "a5-admin-5174" /min cmd /d /c call "%ROOT%scripts\run-frontend-stable.cmd" 5174
 
 echo.
 echo Services are starting in background.
 echo Visitor: http://127.0.0.1:5173/
 echo AI Guide: http://127.0.0.1:5173/guide
-echo Admin: http://127.0.0.1:5173/admin
+echo Admin: http://127.0.0.1:5174/
 echo Backend docs: http://127.0.0.1:8001/docs
 echo.
 echo Mode: static frontend server, no Vite, no hot reload.
