@@ -515,6 +515,57 @@ class CommunityPostModerate(BaseModel):
     status: Literal["published", "hidden"]
 
 
+class TravelJournalSectionInput(BaseModel):
+    id: str = Field(min_length=1, max_length=64)
+    title: str = Field(default="", max_length=200)
+    body: str = Field(default="", max_length=10000)
+
+
+class TravelJournalCreate(BaseModel):
+    description: str = Field(default="", max_length=2000)
+    target_words: int = Field(default=600, ge=200, le=3000)
+
+
+class TravelJournalUpdate(BaseModel):
+    description: str | None = Field(default=None, max_length=2000)
+    target_words: int | None = Field(default=None, ge=200, le=3000)
+    title: str | None = Field(default=None, max_length=200)
+    opening: str | None = Field(default=None, max_length=10000)
+    text_sections: list[TravelJournalSectionInput] | None = Field(
+        default=None,
+        max_length=5,
+    )
+    images: list[TravelJournalSectionInput] | None = Field(
+        default=None,
+        max_length=9,
+    )
+    conclusion: str | None = Field(default=None, max_length=10000)
+
+    @model_validator(mode="after")
+    def validate_unique_section_ids(self):
+        for sections in (self.text_sections, self.images):
+            if sections is None:
+                continue
+            ids = [section.id for section in sections]
+            if len(ids) != len(set(ids)):
+                raise ValueError("section ids must be unique")
+        return self
+
+
+class TravelJournalImageUpdate(BaseModel):
+    title: str = Field(default="", max_length=200)
+    body: str = Field(default="", max_length=10000)
+
+
+class TravelJournalImageOrder(BaseModel):
+    image_ids: list[str] = Field(min_length=1, max_length=9)
+
+
+class TravelJournalGenerate(BaseModel):
+    description: str = Field(default="", max_length=2000)
+    target_words: int = Field(default=600, ge=200, le=3000)
+
+
 class TtsJobResponse(BaseModel):
     id: str
     status: str

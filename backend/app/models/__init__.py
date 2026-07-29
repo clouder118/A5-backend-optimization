@@ -693,6 +693,67 @@ class UserFeedback(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
 
 
+class TravelJournal(Base):
+    __tablename__ = "travel_journal"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    copy_key: Mapped[str | None] = mapped_column(
+        String(200),
+        nullable=True,
+        unique=True,
+        index=True,
+    )
+    visitor_id: Mapped[str] = mapped_column(
+        ForeignKey("app_user.id"),
+        nullable=False,
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(24), default="draft", index=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    target_words: Mapped[int] = mapped_column(Integer, default=600)
+    title: Mapped[str] = mapped_column(String(200), default="")
+    opening: Mapped[str] = mapped_column(Text, default="")
+    text_sections: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    conclusion: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+    visitor: Mapped[AppUser] = relationship()
+    images: Mapped[list["TravelJournalImage"]] = relationship(
+        back_populates="journal",
+        cascade="all, delete-orphan",
+        order_by="TravelJournalImage.sort_order",
+    )
+    community_post: Mapped["CommunityPost | None"] = relationship(
+        back_populates="travel_journal",
+        uselist=False,
+    )
+
+
+class TravelJournalImage(Base):
+    __tablename__ = "travel_journal_image"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    journal_id: Mapped[str] = mapped_column(
+        ForeignKey("travel_journal.id"),
+        nullable=False,
+        index=True,
+    )
+    display_path: Mapped[str] = mapped_column(String(700), nullable=False)
+    model_path: Mapped[str] = mapped_column(String(700), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(40), default="image/jpeg")
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    section_title: Mapped[str] = mapped_column(String(200), default="")
+    section_body: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+
+    journal: Mapped[TravelJournal] = relationship(back_populates="images")
+
+
 class CommunityPost(Base):
     __tablename__ = "community_post"
 
@@ -704,6 +765,17 @@ class CommunityPost(Base):
     )
     author_name: Mapped[str] = mapped_column(String(120), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
+    post_type: Mapped[str] = mapped_column(
+        String(32),
+        default="comment",
+        index=True,
+    )
+    travel_journal_id: Mapped[str | None] = mapped_column(
+        ForeignKey("travel_journal.id"),
+        nullable=True,
+        unique=True,
+        index=True,
+    )
     spot_id: Mapped[str | None] = mapped_column(
         ForeignKey("scenic_spot.id"),
         nullable=True,
@@ -723,6 +795,9 @@ class CommunityPost(Base):
 
     author: Mapped[AppUser] = relationship()
     spot: Mapped[ScenicSpot | None] = relationship()
+    travel_journal: Mapped[TravelJournal | None] = relationship(
+        back_populates="community_post",
+    )
     likes: Mapped[list["CommunityPostLike"]] = relationship(
         back_populates="post",
         cascade="all, delete-orphan",

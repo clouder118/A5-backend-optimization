@@ -23,6 +23,7 @@ from app.api.route_drafts import router as route_drafts_router
 from app.api.routes import router as routes_router
 from app.api.spots import router as spots_router
 from app.api.tours import router as tours_router
+from app.api.travel_journals import router as travel_journals_router
 from app.api.tts import router as tts_router
 from app.core.config import Settings, settings
 from app.core.errors import ApiError, api_error_handler
@@ -101,6 +102,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     app.include_router(maps_router)
     app.include_router(route_drafts_router)
     app.include_router(tours_router)
+    app.include_router(travel_journals_router)
     app.include_router(tts_router)
     Path(active_settings.tts_output_dir).mkdir(parents=True, exist_ok=True)
     app.mount(

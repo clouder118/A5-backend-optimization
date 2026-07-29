@@ -4,6 +4,7 @@ import { requestJson } from './client';
 import type {
   CommunityPost,
   CommunityPostList,
+  CommunityPostType,
   CommunityPostScope,
   CommunityPostSort,
   CommunityPostStatus,
@@ -14,6 +15,21 @@ interface BackendCommunityPost {
   author_id: string;
   author_name: string;
   content: string;
+  post_type: CommunityPostType;
+  travel_journal: {
+    id: string;
+    title: string;
+    opening: string;
+    text_sections: Array<{ id: string; title: string; body: string }>;
+    conclusion: string;
+    images: Array<{
+      id: string;
+      display_url: string;
+      title: string;
+      body: string;
+      sort_order: number;
+    }>;
+  } | null;
   spot: {
     id: string;
     name: string;
@@ -60,6 +76,23 @@ function normalizePost(item: BackendCommunityPost): CommunityPost {
     authorId: item.author_id,
     authorName: item.author_name,
     content: item.content,
+    postType: item.post_type ?? 'comment',
+    travelJournal: item.travel_journal
+      ? {
+          id: item.travel_journal.id,
+          title: item.travel_journal.title,
+          opening: item.travel_journal.opening,
+          textSections: item.travel_journal.text_sections,
+          conclusion: item.travel_journal.conclusion,
+          images: item.travel_journal.images.map((image) => ({
+            id: image.id,
+            displayUrl: image.display_url,
+            title: image.title,
+            body: image.body,
+            sortOrder: image.sort_order,
+          })),
+        }
+      : null,
     spot: item.spot,
     status: item.status,
     likeCount: item.like_count,

@@ -42,6 +42,8 @@ def initialize_database(engine: Engine) -> None:
     _ensure_sqlite_chat_message_columns(engine)
     _ensure_sqlite_route_columns(engine)
     _ensure_sqlite_route_draft_columns(engine)
+    _ensure_sqlite_travel_journal_columns(engine)
+    _ensure_sqlite_community_post_columns(engine)
     _ensure_sqlite_avatar_active_index(engine)
     _ensure_sqlite_knowledge_fts(engine)
 
@@ -101,6 +103,65 @@ def _ensure_sqlite_route_draft_columns(engine: Engine) -> None:
                     "preference_json JSON DEFAULT '{}'"
                 )
             )
+
+
+def _ensure_sqlite_community_post_columns(engine: Engine) -> None:
+    if engine.dialect.name != "sqlite":
+        return
+
+    columns = {
+        column["name"]
+        for column in inspect(engine).get_columns("community_post")
+    }
+    with engine.begin() as connection:
+        if "post_type" not in columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE community_post ADD COLUMN "
+                    "post_type VARCHAR(32) DEFAULT 'comment'"
+                )
+            )
+        if "travel_journal_id" not in columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE community_post ADD COLUMN "
+                    "travel_journal_id VARCHAR(64)"
+                )
+            )
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS "
+                "uq_community_post_travel_journal_id "
+                "ON community_post (travel_journal_id) "
+                "WHERE travel_journal_id IS NOT NULL"
+            )
+        )
+
+
+def _ensure_sqlite_travel_journal_columns(engine: Engine) -> None:
+    if engine.dialect.name != "sqlite":
+        return
+
+    columns = {
+        column["name"]
+        for column in inspect(engine).get_columns("travel_journal")
+    }
+    with engine.begin() as connection:
+        if "copy_key" not in columns:
+            connection.execute(
+                text(
+                    "ALTER TABLE travel_journal ADD COLUMN "
+                    "copy_key VARCHAR(200)"
+                )
+            )
+        connection.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS "
+                "ix_travel_journal_copy_key "
+                "ON travel_journal (copy_key) "
+                "WHERE copy_key IS NOT NULL"
+            )
+        )
 
 
 def _ensure_sqlite_avatar_active_index(engine: Engine) -> None:

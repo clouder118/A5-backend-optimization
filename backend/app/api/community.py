@@ -11,6 +11,7 @@ from app.models import (
     CommunityPost,
     CommunityPostLike,
     ScenicSpot,
+    TravelJournal,
     utc_now,
 )
 from app.schemas import CommunityPostCreate, CommunityPostModerate
@@ -63,6 +64,7 @@ def create_community_post(
         author_id=author.id,
         author_name=author.username,
         content=content,
+        post_type="comment",
         spot_id=spot.id if spot else None,
         status="published",
     )
@@ -89,6 +91,12 @@ def delete_community_post(
     if post.author_id != visitor.id:
         raise ApiError("只能删除自己的留言", "COMMUNITY_DELETE_FORBIDDEN", 403)
 
+    if post.post_type == "travel_journal" and post.travel_journal_id:
+        journal = db.get(TravelJournal, post.travel_journal_id)
+        if journal and journal.visitor_id == visitor.id:
+            journal.status = "draft"
+            journal.updated_at = utc_now()
+        post.travel_journal_id = None
     post.status = "deleted"
     post.updated_at = utc_now()
     db.commit()
@@ -166,7 +174,12 @@ def list_community_posts_for_admin(
             CommunityPost,
             func.coalesce(like_counts.c.like_count, 0).label("like_count"),
         )
-        .options(selectinload(CommunityPost.spot))
+        .options(
+            selectinload(CommunityPost.spot),
+            selectinload(CommunityPost.travel_journal).selectinload(
+                TravelJournal.images
+            ),
+        )
         .outerjoin(like_counts, like_counts.c.post_id == CommunityPost.id)
         .where(*filters)
         .order_by(CommunityPost.created_at.desc(), CommunityPost.id.desc())
@@ -230,7 +243,12 @@ def _list_posts(
     like_count_value = func.coalesce(like_counts.c.like_count, 0)
     stmt = (
         select(CommunityPost, like_count_value.label("like_count"))
-        .options(selectinload(CommunityPost.spot))
+        .options(
+            selectinload(CommunityPost.spot),
+            selectinload(CommunityPost.travel_journal).selectinload(
+                TravelJournal.images
+            ),
+        )
         .outerjoin(like_counts, like_counts.c.post_id == CommunityPost.id)
         .where(*filters)
     )
@@ -311,6 +329,8 @@ def _serialize_post(
         "author_id": post.author_id,
         "author_name": post.author_name,
         "content": post.content,
+        "post_type": post.post_type or "comment",
+        "travel_journal": _serialize_community_journal(post.travel_journal),
         "spot": (
             {"id": post.spot.id, "name": post.spot.name}
             if post.spot
@@ -322,4 +342,28 @@ def _serialize_post(
         "is_mine": viewer_id == post.author_id if viewer_id else False,
         "created_at": post.created_at.isoformat(),
         "updated_at": post.updated_at.isoformat(),
+    }
+
+
+def _serialize_community_journal(journal: TravelJournal | None) -> dict | None:
+    if not journal:
+        return None
+    return {
+        "id": journal.id,
+        "title": journal.title,
+        "opening": journal.opening,
+        "text_sections": journal.text_sections or [],
+        "conclusion": journal.conclusion,
+        "images": [
+            {
+                "id": image.id,
+                "display_url": (
+                    f"/api/travel-journals/{journal.id}/images/{image.id}/display"
+                ),
+                "title": image.section_title,
+                "body": image.section_body,
+                "sort_order": image.sort_order,
+            }
+            for image in sorted(journal.images, key=lambda item: item.sort_order)
+        ],
     }

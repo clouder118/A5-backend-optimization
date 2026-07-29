@@ -12,6 +12,7 @@ import SpotDetailPage from '../pages/visitor/SpotDetailPage';
 import SpotListPage from '../pages/visitor/SpotListPage';
 import TourPage from '../pages/visitor/TourPage';
 import TourRecapPage from '../pages/visitor/TourRecapPage';
+import TravelJournalPage from '../pages/visitor/TravelJournalPage';
 import VisitorLoginPage from '../pages/visitor/VisitorLoginPage';
 import VisitorRegisterPage from '../pages/visitor/VisitorRegisterPage';
 import VisitorServicePage from '../pages/visitor/VisitorServicePage';
@@ -34,6 +35,7 @@ export default function VisitorApp() {
             <Route path="/guide" element={<AiGuidePage />} />
             <Route path="/digital-human-settings" element={<DigitalHumanSettingsPage />} />
             <Route path="/community" element={<CommunityPage />} />
+            <Route path="/travel-journal" element={<TravelJournalPage />} />
             <Route path="/panorama" element={<PanoramaMapPage />} />
             <Route path="/services" element={<Navigate to="/services/heatmap" replace />} />
             <Route path="/services/:serviceId" element={<VisitorServicePage />} />

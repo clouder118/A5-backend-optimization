@@ -83,6 +83,16 @@ class Settings:
     llm_base_url: str = env_value("LLM_BASE_URL", "https://api.xiaomimimo.com/v1")
     llm_api_key: str = env_value_with_alias("LLM_API_KEY", "MIMO_API_KEY")
     llm_model: str = env_value("LLM_MODEL", "mimo-v2.5")
+    kimi_base_url: str = env_value("KIMI_BASE_URL", "https://api.moonshot.cn/v1")
+    kimi_api_key: str = env_value("MOONSHOT_API_KEY", "")
+    kimi_model: str = env_value("KIMI_MODEL", "kimi-k3")
+    kimi_timeout_seconds: float = field(
+        default_factory=lambda: float(os.getenv("KIMI_TIMEOUT_SECONDS", "120"))
+    )
+    travel_journal_asset_dir: str = env_value(
+        "TRAVEL_JOURNAL_ASSET_DIR",
+        "./data/travel_journals",
+    )
     guide_style: str = env_value("GUIDE_STYLE", "warm_real_guide")
     guide_route_trigger_strict: str = env_value("GUIDE_ROUTE_TRIGGER_STRICT", "true")
     llm_temperature_fact: float = field(
@@ -236,6 +246,11 @@ class Settings:
             self,
             "derived_knowledge_path",
             resolve_backend_relative_path(self.derived_knowledge_path),
+        )
+        object.__setattr__(
+            self,
+            "travel_journal_asset_dir",
+            resolve_backend_relative_path(self.travel_journal_asset_dir),
         )
 
 

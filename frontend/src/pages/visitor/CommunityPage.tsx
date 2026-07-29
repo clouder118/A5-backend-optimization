@@ -1,4 +1,5 @@
 import {
+  BookOutlined,
   CommentOutlined,
   DeleteOutlined,
   EnvironmentOutlined,
@@ -14,6 +15,7 @@ import {
   ConfigProvider,
   Empty,
   Input,
+  Modal,
   Pagination,
   Popconfirm,
   Segmented,
@@ -26,7 +28,7 @@ import {
   message,
 } from 'antd';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   createCommunityPost,
   deleteCommunityPost,
@@ -42,6 +44,7 @@ import type {
 import type { ScenicSpot } from '../../types/scenic';
 import { toApiError } from '../../api/client';
 import { useVisitorAuth } from '../../utils/visitorAuthContext';
+import { AuthenticatedJournalImage } from './TravelJournalPage';
 import styles from './CommunityPage.module.css';
 
 const PAGE_SIZE = 10;
@@ -52,6 +55,7 @@ const avatarColors = ['#59766c', '#a65f49', '#7a6a4d', '#6f6883', '#527487'];
 
 export default function CommunityPage() {
   const { user } = useVisitorAuth();
+  const location = useLocation();
   const [messageApi, contextHolder] = message.useMessage();
   const [view, setView] = useState<CommunityView>('latest');
   const [page, setPage] = useState(1);
@@ -65,6 +69,8 @@ export default function CommunityPage() {
   const [submitting, setSubmitting] = useState(false);
   const [pendingLikes, setPendingLikes] = useState<Set<number>>(new Set());
   const [deletingId, setDeletingId] = useState<number>();
+  const [readingPost, setReadingPost] = useState<CommunityPost | null>(null);
+  const highlightedPostId = Number(new URLSearchParams(location.search).get('highlight'));
 
   const scope: CommunityPostScope = view === 'mine' ? 'mine' : 'all';
   const sort: CommunityPostSort = view === 'popular' ? 'popular' : 'latest';
@@ -89,6 +95,12 @@ export default function CommunityPage() {
   useEffect(() => {
     loadPosts();
   }, [loadPosts]);
+
+  useEffect(() => {
+    if (!highlightedPostId || loading) return;
+    const element = document.querySelector(`[data-community-post-id="${highlightedPostId}"]`);
+    element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlightedPostId, loading, posts]);
 
   useEffect(() => {
     getSpots()
@@ -318,7 +330,13 @@ export default function CommunityPage() {
               ) : posts.length ? (
                 <div className={styles.postList}>
                   {posts.map((post) => (
-                    <article className={styles.post} key={post.id}>
+                    <article
+                      className={`${styles.post} ${
+                        post.id === highlightedPostId ? styles.highlightedPost : ''
+                      }`}
+                      key={post.id}
+                      data-community-post-id={post.id}
+                    >
                       <Avatar
                         size={42}
                         className={styles.avatar}
@@ -338,9 +356,38 @@ export default function CommunityPage() {
                           </time>
                         </div>
 
-                        <Typography.Paragraph className={styles.content}>
-                          {post.content}
-                        </Typography.Paragraph>
+                        {post.postType === 'travel_journal' && post.travelJournal ? (
+                          <button
+                            type="button"
+                            className={styles.journalPost}
+                            onClick={() => setReadingPost(post)}
+                          >
+                            <div className={styles.journalCover}>
+                              {post.travelJournal.images[0] ? (
+                                <AuthenticatedJournalImage
+                                  image={post.travelJournal.images[0]}
+                                  alt={post.travelJournal.title}
+                                />
+                              ) : (
+                                <BookOutlined />
+                              )}
+                            </div>
+                            <div className={styles.journalPostCopy}>
+                              <Tag>旅行手账</Tag>
+                              <Typography.Title level={4}>
+                                {post.travelJournal.title || '未命名旅行手账'}
+                              </Typography.Title>
+                              <Typography.Paragraph ellipsis={{ rows: 2 }}>
+                                {post.travelJournal.opening || post.content}
+                              </Typography.Paragraph>
+                              <span>阅读全文</span>
+                            </div>
+                          </button>
+                        ) : (
+                          <Typography.Paragraph className={styles.content}>
+                            {post.content}
+                          </Typography.Paragraph>
+                        )}
 
                         <div className={styles.postFooter}>
                           <div>
@@ -372,8 +419,8 @@ export default function CommunityPage() {
                             </Tooltip>
                             {post.isMine ? (
                               <Popconfirm
-                                title="删除这条留言？"
-                                description="删除后，其他游客将无法再看到它。"
+                                title={post.postType === 'travel_journal' ? '从社区删除这篇手账？' : '删除这条留言？'}
+                                description={post.postType === 'travel_journal' ? '手账会回到“我的手账”成为未发布草稿。' : '删除后，其他游客将无法再看到它。'}
                                 okText="删除"
                                 cancelText="取消"
                                 okButtonProps={{ danger: true }}
@@ -383,6 +430,7 @@ export default function CommunityPage() {
                                   <Button
                                     type="text"
                                     danger
+                                    className={styles.deleteButton}
                                     icon={<DeleteOutlined />}
                                     loading={deletingId === post.id}
                                     aria-label="删除留言"
@@ -447,6 +495,55 @@ export default function CommunityPage() {
             </section>
           </aside>
         </div>
+        <Modal
+          open={Boolean(readingPost?.travelJournal)}
+          width={920}
+          footer={null}
+          centered
+          destroyOnClose
+          title={null}
+          onCancel={() => setReadingPost(null)}
+          className={styles.journalReaderModal}
+        >
+          {readingPost?.travelJournal ? (
+            <article className={styles.journalReader}>
+              <Typography.Title level={1}>
+                {readingPost.travelJournal.title || '未命名旅行手账'}
+              </Typography.Title>
+              <div className={styles.journalReaderMeta}>
+                <span>{readingPost.authorName}</span>
+                <time>{formatCommunityTime(readingPost.createdAt)}</time>
+              </div>
+              {readingPost.travelJournal.opening ? (
+                <p className={styles.journalLead}>{readingPost.travelJournal.opening}</p>
+              ) : null}
+              {readingPost.travelJournal.textSections.map((section) => (
+                <section key={section.id}>
+                  {section.title ? <h2>{section.title}</h2> : null}
+                  <p>{section.body}</p>
+                </section>
+              ))}
+              {readingPost.travelJournal.images.map((image, index) => (
+                <section key={image.id}>
+                  {image.title ? <h2>{image.title}</h2> : null}
+                  <figure>
+                    <AuthenticatedJournalImage
+                      image={image}
+                      alt={`旅行手账配图 ${index + 1}`}
+                    />
+                  </figure>
+                  <p>{image.body}</p>
+                </section>
+              ))}
+              {readingPost.travelJournal.conclusion ? (
+                <section className={styles.journalConclusion}>
+                  <h2>写在最后</h2>
+                  <p>{readingPost.travelJournal.conclusion}</p>
+                </section>
+              ) : null}
+            </article>
+          ) : null}
+        </Modal>
       </div>
     </ConfigProvider>
   );

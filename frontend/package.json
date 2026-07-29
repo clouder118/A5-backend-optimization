@@ -26,7 +26,9 @@
     "verify:avatar-runtime": "node scripts/verify-avatar-runtime-config.mjs",
     "verify:source-provenance": "node scripts/verify-source-provenance.mjs",
     "verify:welcome-audio": "node scripts/verify-welcome-audio.mjs",
-    "verify:digital-human-persona": "node scripts/verify-digital-human-persona.mjs"
+    "verify:digital-human-persona": "node scripts/verify-digital-human-persona.mjs",
+    "verify:travel-journal": "playwright test tests/travel-journal.spec.ts",
+    "verify:travel-journal:live": "playwright test tests/travel-journal-live.spec.ts --workers=1"
   },
   "dependencies": {
     "@ant-design/charts": "^2.6.7",
