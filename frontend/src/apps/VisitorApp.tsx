@@ -6,6 +6,7 @@ import CommunityPage from '../pages/visitor/CommunityPage';
 import DigitalHumanSettingsPage from '../pages/visitor/DigitalHumanSettingsPage';
 import HomePage from '../pages/visitor/HomePage';
 import PanoramaMapPage from '../pages/visitor/PanoramaMapPage';
+import PhotoWorkshopPage from '../pages/visitor/PhotoWorkshopPage';
 import RouteDraftPage from '../pages/visitor/RouteDraftPage';
 import RouteRecommendPage from '../pages/visitor/RouteRecommendPage';
 import SpotDetailPage from '../pages/visitor/SpotDetailPage';
@@ -36,6 +37,7 @@ export default function VisitorApp() {
             <Route path="/digital-human-settings" element={<DigitalHumanSettingsPage />} />
             <Route path="/community" element={<CommunityPage />} />
             <Route path="/travel-journal" element={<TravelJournalPage />} />
+            <Route path="/photo-workshop" element={<PhotoWorkshopPage />} />
             <Route path="/panorama" element={<PanoramaMapPage />} />
             <Route path="/services" element={<Navigate to="/services/heatmap" replace />} />
             <Route path="/services/:serviceId" element={<VisitorServicePage />} />

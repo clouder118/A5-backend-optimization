@@ -566,6 +566,21 @@ class TravelJournalGenerate(BaseModel):
     target_words: int = Field(default=600, ge=200, le=3000)
 
 
+class PhotoWorkshopPolishRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=2000)
+
+
+class PhotoWorkshopPolishResponse(BaseModel):
+    prompt: str
+
+
+class PhotoWorkshopGenerateResponse(BaseModel):
+    image_base64: str
+    mime_type: str
+    width: int
+    height: int
+
+
 class TtsJobResponse(BaseModel):
     id: str
     status: str

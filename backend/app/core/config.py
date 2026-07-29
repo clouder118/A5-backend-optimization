@@ -93,6 +93,30 @@ class Settings:
         "TRAVEL_JOURNAL_ASSET_DIR",
         "./data/travel_journals",
     )
+    photo_workshop_seedream_base_url: str = env_value(
+        "SEEDREAM_BASE_URL",
+        "https://ark.cn-beijing.volces.com/api/v3",
+    )
+    photo_workshop_seedream_api_key: str = env_value_with_alias(
+        "SEEDREAM_API_KEY",
+        "ARK_API_KEY",
+    )
+    photo_workshop_seedream_model: str = env_value(
+        "SEEDREAM_MODEL",
+        "doubao-seedream-5-0-pro-260628",
+    )
+    photo_workshop_seedream_timeout_seconds: float = field(
+        default_factory=lambda: float(os.getenv("SEEDREAM_TIMEOUT_SECONDS", "180"))
+    )
+    photo_workshop_polish_model: str = env_value(
+        "PHOTO_WORKSHOP_POLISH_MODEL",
+        "mimo-v2.5-pro",
+    )
+    photo_workshop_polish_timeout_seconds: float = field(
+        default_factory=lambda: float(
+            os.getenv("PHOTO_WORKSHOP_POLISH_TIMEOUT_SECONDS", "60")
+        )
+    )
     guide_style: str = env_value("GUIDE_STYLE", "warm_real_guide")
     guide_route_trigger_strict: str = env_value("GUIDE_ROUTE_TRIGGER_STRICT", "true")
     llm_temperature_fact: float = field(

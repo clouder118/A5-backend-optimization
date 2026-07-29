@@ -5,6 +5,7 @@ import {
   GlobalOutlined,
   HomeOutlined,
   NodeIndexOutlined,
+  PictureOutlined,
   ReadOutlined,
   RobotOutlined,
 } from '@ant-design/icons';
@@ -55,6 +56,7 @@ function isProtectedVisitorPath(pathname: string) {
     pathname.startsWith('/tour/') ||
     pathname === '/community' ||
     pathname === '/travel-journal' ||
+    pathname === '/photo-workshop' ||
     pathname === '/services' ||
     pathname.startsWith('/services/') ||
     pathname === '/panorama' ||
@@ -122,6 +124,11 @@ export default function VisitorLayout() {
       label: <Link to="/travel-journal">旅行手账共创</Link>,
     },
     {
+      key: '/photo-workshop',
+      icon: <PictureOutlined />,
+      label: <Link to="/photo-workshop">相册创意工坊</Link>,
+    },
+    {
       key: '/routes',
       icon: <NodeIndexOutlined />,
       label: <Link to={routeNavPath} state={routeNavState}>个性化推荐</Link>,
@@ -144,6 +151,8 @@ export default function VisitorLayout() {
           ? '/community'
         : location.pathname === '/travel-journal'
           ? '/travel-journal'
+        : location.pathname === '/photo-workshop'
+          ? '/photo-workshop'
         : location.pathname === '/panorama'
           ? '/panorama'
         : location.pathname === '/digital-human-settings'

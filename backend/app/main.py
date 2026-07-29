@@ -19,6 +19,7 @@ from app.api.health import router as health_router
 from app.api.knowledge import router as knowledge_router
 from app.api.logs import router as logs_router
 from app.api.maps import router as maps_router
+from app.api.photo_workshop import router as photo_workshop_router
 from app.api.route_drafts import router as route_drafts_router
 from app.api.routes import router as routes_router
 from app.api.spots import router as spots_router
@@ -100,6 +101,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     app.include_router(knowledge_router)
     app.include_router(logs_router)
     app.include_router(maps_router)
+    app.include_router(photo_workshop_router)
     app.include_router(route_drafts_router)
     app.include_router(tours_router)
     app.include_router(travel_journals_router)

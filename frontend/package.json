@@ -28,7 +28,8 @@
     "verify:welcome-audio": "node scripts/verify-welcome-audio.mjs",
     "verify:digital-human-persona": "node scripts/verify-digital-human-persona.mjs",
     "verify:travel-journal": "playwright test tests/travel-journal.spec.ts",
-    "verify:travel-journal:live": "playwright test tests/travel-journal-live.spec.ts --workers=1"
+    "verify:travel-journal:live": "playwright test tests/travel-journal-live.spec.ts --workers=1",
+    "verify:photo-workshop": "playwright test tests/photo-workshop.spec.ts"
   },
   "dependencies": {
     "@ant-design/charts": "^2.6.7",
