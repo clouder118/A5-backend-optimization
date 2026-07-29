@@ -1,4 +1,5 @@
 import { requestJson, toApiError } from './client';
+import { readVisitorToken } from './auth';
 import { API_BASE_URL, USE_MOCK_API } from './config';
 import { mockChatAnswers } from './mock/visitorData';
 import { toRoutePlan } from './routes';
@@ -111,12 +112,6 @@ function toBackendChatRequest(input: ChatRequest) {
           }
         : undefined,
       route_context: input.routeContext ? toBackendRouteContext(input.routeContext) : undefined,
-      guide_mode: input.guideMode
-        ? {
-            style: input.guideMode.style,
-            duration: input.guideMode.duration,
-          }
-        : undefined,
       current_spot_name: input.currentSpotName,
     },
   };
@@ -266,8 +261,10 @@ export async function mockChatApi(input: ChatRequest | string): Promise<ChatResp
 
 export async function realChatApi(input: ChatRequest | string): Promise<ChatResponse> {
   const request = normalizeQuestion(input);
+  const token = readVisitorToken();
   const response = await requestJson<BackendChatResponse, unknown>('/api/chat', {
     method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: toBackendChatRequest(request),
   });
   return toChatResponse(response);
@@ -298,10 +295,12 @@ async function realStreamChatApi(
   options: StreamChatOptions,
 ): Promise<ChatResponse> {
   const request = normalizeQuestion(input);
+  const token = readVisitorToken();
   const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(toBackendChatRequest(request)),
   });

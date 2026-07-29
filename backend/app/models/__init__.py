@@ -632,6 +632,29 @@ class AppUser(Base):
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
+class DigitalHumanPersona(Base):
+    __tablename__ = "digital_human_persona"
+
+    visitor_id: Mapped[str] = mapped_column(
+        ForeignKey("app_user.id"),
+        primary_key=True,
+    )
+    identity: Mapped[str] = mapped_column(String(48), nullable=False)
+    age_mode: Mapped[str] = mapped_column(String(16), nullable=False)
+    age_group: Mapped[str] = mapped_column(String(24), nullable=False)
+    exact_age: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    gender: Mapped[str] = mapped_column(String(24), nullable=False)
+    personalities: Mapped[list[str]] = mapped_column(JSON, default=list)
+    expression_style: Mapped[str] = mapped_column(String(32), nullable=False)
+    creative_prompt: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=utc_now,
+        onupdate=utc_now,
+    )
+
+
 class ChatSession(Base):
     __tablename__ = "chat_session"
 

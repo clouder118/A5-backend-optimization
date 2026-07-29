@@ -46,3 +46,20 @@ def require_visitor(
             return user
         raise ApiError("游客权限不足", "VISITOR_PERMISSION_DENIED", 403)
     raise ApiError("游客登录状态无效", "AUTH_TOKEN_INVALID", 401)
+
+
+def optional_visitor(
+    request: Request,
+    authorization: str | None = Header(default=None),
+) -> AuthUser | None:
+    if not authorization:
+        return None
+    if not authorization.startswith("Bearer "):
+        raise ApiError("游客登录状态无效", "AUTH_TOKEN_INVALID", 401)
+    user = read_token(
+        authorization.removeprefix("Bearer ").strip(),
+        request.app.state.settings,
+    )
+    if user.role != "visitor":
+        raise ApiError("游客权限不足", "VISITOR_PERMISSION_DENIED", 403)
+    return user

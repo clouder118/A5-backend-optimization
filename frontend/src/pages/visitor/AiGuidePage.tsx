@@ -7,8 +7,8 @@ import { getTtsJobStatus } from '../../api/tts';
 import AvatarGuide from '../../components/guide/AvatarGuide';
 import type { AvatarAudioState } from '../../components/guide/AvatarGuide';
 import ChatBox from '../../components/guide/ChatBox';
+import DigitalHumanPersonaControl from '../../components/guide/DigitalHumanPersonaControl';
 import GuideFeedbackButton from '../../components/guide/GuideFeedbackButton';
-import GuideModeSelector, { DEFAULT_GUIDE_MODE } from '../../components/guide/GuideModeSelector';
 import GuideQuickPrompts from '../../components/guide/GuideQuickPrompts';
 import type { GuideQuickPrompt } from '../../components/guide/GuideQuickPrompts';
 import GuideRouteDrawer from '../../components/guide/GuideRouteDrawer';
@@ -20,7 +20,6 @@ import { productCopy } from '../../config/product';
 import type {
   ChatMessage,
   GuideImageAttachment,
-  GuideMode,
   GuideRouteContext,
   GuideStatus,
   GuideVoiceMessage,
@@ -53,7 +52,6 @@ import {
 } from '../../utils/visitorSessionState';
 
 const INITIAL_MESSAGE_DELAY_MS = 100;
-const GUIDE_MODE_SESSION_KEY = 'a5-visitor-login-session:guide-mode';
 
 type UserMessagePatch = Partial<Omit<ChatMessage, 'id' | 'role' | 'createdAt'>>;
 
@@ -67,52 +65,6 @@ function sourceDelay() {
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-function isGuideMode(value: unknown): value is GuideMode {
-  const candidate = value as GuideMode;
-  return (
-    Boolean(candidate) &&
-    ['children', 'study', 'senior'].includes(candidate.style) &&
-    ['half_minute', 'two_minutes'].includes(candidate.duration)
-  );
-}
-
-function normalizeGuideMode(value: unknown): GuideMode | undefined {
-  if (isGuideMode(value)) return value;
-  const candidate = value as { style?: unknown; duration?: unknown } | undefined;
-  if (!candidate) return undefined;
-  const rawStyle = String(candidate.style ?? '');
-  const rawDuration = String(candidate.duration ?? '');
-  const style =
-    rawStyle === 'children' || rawStyle === 'study' || rawStyle === 'senior'
-      ? rawStyle
-      : rawStyle === 'elder' || rawStyle === 'old'
-        ? 'senior'
-        : 'study';
-  const duration = rawDuration === 'two_minutes' || rawDuration === 'three_minutes' ? 'two_minutes' : 'half_minute';
-  return { style, duration };
-}
-
-function loadInitialGuideMode(): GuideMode {
-  if (typeof window === 'undefined') return DEFAULT_GUIDE_MODE;
-  try {
-    const raw = window.sessionStorage.getItem(GUIDE_MODE_SESSION_KEY);
-    if (!raw) return DEFAULT_GUIDE_MODE;
-    const parsed = JSON.parse(raw) as unknown;
-    return normalizeGuideMode(parsed) ?? DEFAULT_GUIDE_MODE;
-  } catch {
-    return DEFAULT_GUIDE_MODE;
-  }
-}
-
-function saveGuideMode(mode: GuideMode): void {
-  if (typeof window === 'undefined') return;
-  try {
-    window.sessionStorage.setItem(GUIDE_MODE_SESSION_KEY, JSON.stringify(mode));
-  } catch {
-    // Guide mode is a lightweight preference; storage failure should not block chat.
-  }
 }
 
 function audioStateFromTtsStatus(status?: ChatMessage['ttsStatus']): AvatarAudioState {
@@ -180,7 +132,6 @@ export default function AiGuidePage() {
   const [routeDrawerOpen, setRouteDrawerOpen] = useState(
     () => openRouteParam === '1' || loadGuideRouteDrawerOpen(),
   );
-  const [guideMode, setGuideMode] = useState<GuideMode>(() => loadInitialGuideMode());
   const handledInitialQuestionKeyRef = useRef(initialGuideSession?.handledInitialQuestionKey);
   const voiceAudioUrlsRef = useRef<Set<string>>(new Set());
 
@@ -202,10 +153,6 @@ export default function AiGuidePage() {
   useEffect(() => {
     saveVisitorPreference(preference);
   }, [preference]);
-
-  useEffect(() => {
-    saveGuideMode(guideMode);
-  }, [guideMode]);
 
   const updateRouteContext = useCallback((nextContext: GuideRouteContext) => {
     setRouteContext(nextContext);
@@ -377,7 +324,6 @@ export default function AiGuidePage() {
       preference: preferenceText,
       routePreference: routeAwarePreference,
       routeContext: activeRouteContext,
-      guideMode,
       spotId: activeRouteContext ? undefined : spotId,
       currentSpotName: activeRouteContext?.currentSpot?.name ?? spotName,
       image: userMessagePatch?.image,
@@ -608,9 +554,7 @@ export default function AiGuidePage() {
             avatarSrc: avatar151Guide.chatAvatarUrl,
             avatarAlt: '灵诗音导游头像',
           }}
-          guideModeControl={
-            <GuideModeSelector value={guideMode} disabled={!introReady} onChange={setGuideMode} />
-          }
+          headerControl={<DigitalHumanPersonaControl disabled={!introReady} />}
           onSend={(question) => void sendQuestion(question)}
           onSendVoice={sendVoiceQuestion}
           onSendImage={sendImageQuestion}

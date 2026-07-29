@@ -303,14 +303,6 @@ export interface GuideImageAttachment {
 
 export type GuideImageMessage = GuideImageAttachment;
 
-export type GuideNarrationStyle = 'children' | 'study' | 'senior';
-export type GuideNarrationDuration = 'half_minute' | 'two_minutes';
-
-export interface GuideMode {
-  style: GuideNarrationStyle;
-  duration: GuideNarrationDuration;
-}
-
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -351,7 +343,6 @@ export interface ChatRequest {
   preference?: string;
   routePreference?: RoutePreferenceInput;
   routeContext?: GuideRouteContext;
-  guideMode?: GuideMode;
   spotId?: string;
   currentSpotName?: string;
   image?: GuideImageAttachment;

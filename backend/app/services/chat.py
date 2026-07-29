@@ -22,6 +22,10 @@ from app.schemas import (
 )
 from app.services.mimo import MimoClient
 from app.services.map_point_types import ROUTEABLE_MAP_POINT_TYPES
+from app.services.digital_human_persona import (
+    get_persona_for_chat,
+    persona_prompt,
+)
 from app.services.question_classifier import classify_question
 from app.services.rag import retrieve_context_with_metrics
 from app.services.routes import recommend_routes
@@ -96,43 +100,6 @@ GUIDE_THEME_ALIASES = {
 MAP_NAME_LABELS = {
     "ling-shan": "灵山胜境",
     "nianhua-bay": "拈花湾",
-}
-
-GUIDE_MODE_STYLES = {
-    "children": {
-        "label": "儿童版",
-        "instruction": "像给孩子讲故事一样，句子短一点，多用具体画面和温和互动；可以用比喻，句尾可以少量使用亲切表情符号，比如😊，通常一条回答最多1个；不要幼稚化、不要卖萌、不要堆表情。",
-    },
-    "study": {
-        "label": "研学版",
-        "instruction": "突出知识点、观察角度和一个小问题，适合学生边走边学；表达清楚、有条理，不要像考试答案。",
-    },
-    "senior": {
-        "label": "长者版",
-        "instruction": "语速感放慢，少用抽象术语，重点讲清看点、休息节奏和少走路建议；语气稳、亲切、不过度热闹。",
-    },
-}
-
-GUIDE_MODE_DURATIONS = {
-    "half_minute": {
-        "label": "约半分钟",
-        "instruction": "普通讲解参考约90到160个汉字，像半分钟现场讲解；控制在1到2个自然短段，讲一个核心看点和一个现场建议即可，不需要卡死字数，但要完整收尾。",
-    },
-    "two_minutes": {
-        "label": "约两分钟",
-        "instruction": "普通讲解参考约380到620个汉字，像两分钟现场讲解；可以分3到5个自然短段，至少展开观察点、知识解释和现场建议，不要只回答两三句，也不要机械凑字数。",
-    },
-}
-
-LEGACY_GUIDE_MODE_STYLE_ALIASES = {
-    "culture": "study",
-    "elder": "senior",
-    "old": "senior",
-}
-
-LEGACY_GUIDE_MODE_DURATION_ALIASES = {
-    "one_minute": "half_minute",
-    "three_minutes": "two_minutes",
 }
 
 ROUTE_STRONG_REQUEST_WORDS = (
@@ -238,6 +205,7 @@ def answer_chat(
     settings: Settings,
     request: ChatRequest,
     tts_jobs: TtsJobStore | None = None,
+    visitor_id: str | None = None,
 ) -> ChatResponse:
     total_started = perf_counter()
     request = _with_route_context_spot_id(request)
@@ -258,7 +226,7 @@ def answer_chat(
         request.question,
         _route_context_from_request(request),
     )
-    guide_mode = _guide_mode_from_request(request)
+    persona = get_persona_for_chat(db, visitor_id)
     if request.image is not None:
         return _answer_image_chat(
             db,
@@ -268,8 +236,16 @@ def answer_chat(
             classification,
             total_started,
             tts_jobs,
+            persona=persona,
         )
-    direct_result = _maybe_direct_guide_result(db, settings, request, chat_session, classification)
+    direct_result = _maybe_direct_guide_result(
+        db,
+        settings,
+        request,
+        chat_session,
+        classification,
+        persona,
+    )
     if direct_result is not None:
         tts_started = perf_counter()
         audio_url, tts_status, tts_job_id = _start_tts(settings, direct_result.answer, tts_jobs)
@@ -318,7 +294,13 @@ def answer_chat(
             emotion_cue=direct_result.emotion_cue,
         )
 
-    answer_cache_key = _answer_cache_key(request.question, request.spot_id, classification, settings, guide_mode)
+    answer_cache_key = _answer_cache_key(
+        request.question,
+        request.spot_id,
+        classification,
+        settings,
+        persona,
+    )
     cached_answer = _get_answer_cache(answer_cache_key, settings)
     if cached_answer is not None:
         answer = _with_route_context_intro(cached_answer.answer, request.question, _route_context_from_request(request))
@@ -404,7 +386,7 @@ def answer_chat(
         web_supplement_required,
         web_supplement_status,
         route_focus_instruction,
-        guide_mode,
+        persona,
     )
     answer = _with_route_context_intro(base_answer, request.question, _route_context_from_request(request))
     llm_ms = _elapsed_ms(llm_started)
@@ -488,6 +470,7 @@ def stream_chat_events(
     settings: Settings,
     request: ChatRequest,
     tts_jobs: TtsJobStore | None = None,
+    visitor_id: str | None = None,
 ):
     total_started = perf_counter()
     request = _with_route_context_spot_id(request)
@@ -508,7 +491,7 @@ def stream_chat_events(
         request.question,
         _route_context_from_request(request),
     )
-    guide_mode = _guide_mode_from_request(request)
+    persona = get_persona_for_chat(db, visitor_id)
     if request.image is not None:
         yield _sse("status", {"phase": "vision"})
         response = _answer_image_chat(
@@ -520,12 +503,20 @@ def stream_chat_events(
             total_started,
             tts_jobs,
             first_delta_ms=_elapsed_ms(total_started),
+            persona=persona,
         )
         for chunk in _chunk_text(response.answer):
             yield _sse("delta", {"text": chunk})
         yield _sse("final", response.model_dump())
         return
-    direct_result = _maybe_direct_guide_result(db, settings, request, chat_session, classification)
+    direct_result = _maybe_direct_guide_result(
+        db,
+        settings,
+        request,
+        chat_session,
+        classification,
+        persona,
+    )
     if direct_result is not None:
         llm_started = perf_counter()
         first_delta_ms = 0.0
@@ -584,7 +575,13 @@ def stream_chat_events(
         yield _sse("final", response.model_dump())
         return
 
-    answer_cache_key = _answer_cache_key(request.question, request.spot_id, classification, settings, guide_mode)
+    answer_cache_key = _answer_cache_key(
+        request.question,
+        request.spot_id,
+        classification,
+        settings,
+        persona,
+    )
     cached_answer = _get_answer_cache(answer_cache_key, settings)
     if cached_answer is not None:
         answer = _with_route_context_intro(cached_answer.answer, request.question, _route_context_from_request(request))
@@ -692,7 +689,7 @@ def stream_chat_events(
         web_supplement_status,
         stream_state,
         route_focus_instruction,
-        guide_mode,
+        persona,
     ):
         answer_parts.append(chunk)
         if first_delta_ms == 0:
@@ -804,83 +801,12 @@ def _update_session_profile(chat_session: ChatSession, profile: dict) -> None:
         chat_session.preference = preference
 
 
-def _guide_mode_from_request(request: ChatRequest) -> dict:
-    profile = request.profile if isinstance(request.profile, dict) else {}
-    raw = profile.get("guide_mode") or profile.get("guideMode")
-    if not isinstance(raw, dict):
-        return {}
-    style = str(raw.get("style") or "").strip()
-    duration = str(raw.get("duration") or "").strip()
-    style = LEGACY_GUIDE_MODE_STYLE_ALIASES.get(style, style)
-    duration = LEGACY_GUIDE_MODE_DURATION_ALIASES.get(duration, duration)
-    if style not in GUIDE_MODE_STYLES and duration not in GUIDE_MODE_DURATIONS:
-        return {}
-    return {
-        "style": style if style in GUIDE_MODE_STYLES else "study",
-        "duration": duration if duration in GUIDE_MODE_DURATIONS else "half_minute",
-    }
-
-
-def _guide_mode_cache_token(guide_mode: dict | None) -> tuple[str, str]:
-    if not guide_mode:
-        return ("", "")
-    return (
-        str(guide_mode.get("style") or ""),
-        str(guide_mode.get("duration") or ""),
-    )
-
-
-def _guide_mode_prompt(guide_mode: dict | None) -> str:
-    if not guide_mode:
-        return ""
-    style = GUIDE_MODE_STYLES.get(str(guide_mode.get("style") or ""))
-    duration = GUIDE_MODE_DURATIONS.get(str(guide_mode.get("duration") or ""))
-    if not style or not duration:
-        return ""
-    return (
-        "【导游模式】\n"
-        f"- 当前讲解风格：{style['label']}。{style['instruction']}\n"
-        f"- 当前讲解时长：{duration['label']}。{duration['instruction']}\n"
-        "- 导游模式只调整讲法、详略和现场建议，不改变事实证据；不能为了风格编造传说、数据、路线或开放信息。\n"
-        "- 只输出游客能直接听到的导游话术，不要写括号里的动作、表情说明、语气说明、舞台提示或镜头说明。\n"
-        "- 如果游客问的是票价、开放时间、安全、路线状态或寒暄，优先准确简洁，不要为了凑时长强行扩写。\n\n"
-    )
-
-
-def _guide_mode_output_rule(guide_mode: dict | None) -> str:
-    if not guide_mode:
-        return "请输出一段直接回答，2 到 4 句即可：先回应游客，再讲重点，再给一个现场建议。"
-    duration = GUIDE_MODE_DURATIONS.get(str(guide_mode.get("duration") or ""))
-    duration_rule = duration["instruction"] if duration else "按游客当前选择的讲解时长自然展开。"
-    return (
-        "【回答组织要求】\n"
-        "- 请按【导游模式】直接回答：先回应游客，再讲重点，再给一个现场建议。\n"
-        f"- 时长要求：{duration_rule}必须讲完整，以完整句子结束，不要停在半句话或逗号后。\n"
-        "- 如果是景点讲解、看点、拍照或文化问题，按所选时长自然展开；两分钟模式不要只回答两三句。\n"
-        "- 半分钟模式不要展开成三四段，也不要连续罗列多个观察点；讲清一个重点并自然收尾即可。\n"
-        "- 如果是服务、票价、开放时间、路线状态或寒暄，保持简洁准确，不要强行写满。\n"
-        "- 不要输出“（走到你身边）”“（用手指向两边）”“（语气轻快地）”这类动作或表演提示。\n"
-    )
-
-
-def _max_completion_tokens_for_guide_mode(settings: Settings, guide_mode: dict | None) -> int:
-    base = max(256, int(settings.llm_max_completion_tokens or 0))
-    if not guide_mode:
-        return base
-    duration = str(guide_mode.get("duration") or "")
-    if duration == "two_minutes":
-        return max(base, 1200)
-    if duration == "half_minute":
-        return max(base, 520)
-    return base
-
-
 def _answer_cache_key(
     question: str,
     spot_id: str | None,
     classification: dict,
     settings: Settings,
-    guide_mode: dict | None = None,
+    persona: dict | None = None,
 ) -> tuple:
     entities = tuple(
         sorted(
@@ -890,14 +816,14 @@ def _answer_cache_key(
         )
     )
     return (
-        "guide-answer-v2",
+        "guide-answer-v3",
         re.sub(r"\s+", " ", question.strip().lower())[:240],
         spot_id or "",
         classification.get("intent", ""),
         entities,
         settings.llm_model,
         settings.guide_style,
-        _guide_mode_cache_token(guide_mode),
+        str((persona or {}).get("cache_token") or ""),
         settings.rag_embedding_model,
         settings.database_url,
         settings.source_package_path,
@@ -1253,23 +1179,44 @@ def _maybe_direct_guide_result(
     request: ChatRequest,
     chat_session: ChatSession,
     classification: dict,
+    persona: dict | None = None,
 ) -> DirectGuideResult | None:
     question = request.question.strip()
-    route_context_result = _route_context_direct_result(question, request, classification)
-    if route_context_result is not None:
-        return route_context_result
-    if _route_context_from_request(request) and (
+    result = _route_context_direct_result(question, request, classification)
+    if result is None and _route_context_from_request(request) and (
         _route_context_scenic_detail_question(question)
         or _route_context_next_scenic_detail_question(question)
     ):
         return None
-    if _is_scenic_spot_listing_question(question):
-        return _scenic_spot_listing_result(db, request, chat_session)
-    if _is_route_guide_question(question, classification, chat_session):
-        return _route_guide_result(db, settings, request, chat_session)
-    if _is_casual_guide_question(question, classification):
-        return _casual_guide_result(settings, question)
-    return None
+    if result is None and _is_scenic_spot_listing_question(question):
+        result = _scenic_spot_listing_result(db, request, chat_session)
+    if result is None and _is_route_guide_question(question, classification, chat_session):
+        result = _route_guide_result(db, settings, request, chat_session)
+    if result is None and _is_casual_guide_question(question, classification):
+        return _casual_guide_result(settings, question, persona)
+    return _personalize_direct_result(settings, result, persona)
+
+
+def _personalize_direct_result(
+    settings: Settings,
+    result: DirectGuideResult | None,
+    persona: dict | None,
+) -> DirectGuideResult | None:
+    if result is None or not persona:
+        return result
+    rewritten = _mimo_style_answer(
+        settings,
+        system_prompt=(
+            f"{_direct_guide_system_prompt(persona)}"
+            "请只改写接下来提供的既有回答，使它符合人设。"
+            "必须保留所有景点名、路线顺序、数值、状态、风险提醒和能力边界，不得补充新事实。"
+        ),
+        user_prompt=f"请改写这段既有导游回答：\n{result.answer}",
+        answer_style="guide",
+    )
+    if rewritten:
+        result.answer = rewritten
+    return result
 
 
 def _route_context_direct_result(
@@ -1597,10 +1544,14 @@ def _is_casual_guide_question(question: str, classification: dict) -> bool:
     return False
 
 
-def _casual_guide_result(settings: Settings, question: str) -> DirectGuideResult:
+def _casual_guide_result(
+    settings: Settings,
+    question: str,
+    persona: dict | None = None,
+) -> DirectGuideResult:
     answer = _mimo_style_answer(
         settings,
-        system_prompt=_direct_guide_system_prompt(),
+        system_prompt=_direct_guide_system_prompt(persona),
         user_prompt=(
             f"游客刚刚说：{question}\n"
             "请用 1 到 3 句自然回应。不要引用资料，不要说“根据资料”。"
@@ -1708,12 +1659,13 @@ def _llm_available(settings: Settings) -> bool:
     return settings.llm_mode == "openai_compatible" and bool(settings.llm_api_key)
 
 
-def _direct_guide_system_prompt() -> str:
+def _direct_guide_system_prompt(persona: dict | None = None) -> str:
     return (
         "你是“灵诗音”，灵山胜境景区数字人导游。你的语气像一位温柔、有经验的真人导游，"
         "亲切、有一点个性，但不要卖萌。回答要短，适合游客现场听。"
         "不要用“根据资料”“当前资料显示”“关于……”这类资料播报式开头。"
         "没有证据时不要编造景区事实。"
+        f"{persona_prompt(persona)}"
     )
 
 
@@ -2147,9 +2099,10 @@ def _answer_image_chat(
     total_started: float,
     tts_jobs: TtsJobStore | None,
     first_delta_ms: float = 0,
+    persona: dict | None = None,
 ) -> ChatResponse:
     llm_started = perf_counter()
-    answer, mode, degraded = _answer_image_text(settings, request)
+    answer, mode, degraded = _answer_image_text(settings, request, persona)
     llm_ms = _elapsed_ms(llm_started)
     tts_started = perf_counter()
     audio_url, tts_status, tts_job_id = _start_tts(settings, answer, tts_jobs)
@@ -2201,21 +2154,27 @@ def _answer_image_chat(
     )
 
 
-def _answer_image_text(settings: Settings, request: ChatRequest) -> tuple[str, str, bool]:
+def _answer_image_text(
+    settings: Settings,
+    request: ChatRequest,
+    persona: dict | None = None,
+) -> tuple[str, str, bool]:
     if settings.llm_mode == "mock":
         return _mock_image_answer(request), "mock_vision", False
     if settings.llm_mode in {"disabled", "fallback"} or not settings.llm_api_key:
         return _image_unavailable_answer(request), "vision_unavailable", True
-    guide_mode = _guide_mode_from_request(request)
     try:
         client = MimoClient(settings.llm_base_url, settings.llm_api_key)
         raw_answer = client.vision_chat_completion(
             model=settings.llm_model,
             system_prompt=_image_system_prompt(),
-            user_prompt=_image_user_prompt(request),
+            user_prompt=_image_user_prompt(request, persona),
             image_data_url=request.image.data_url if request.image else "",
             temperature=settings.llm_temperature_guide,
-            max_completion_tokens=_max_completion_tokens_for_guide_mode(settings, guide_mode),
+            max_completion_tokens=max(
+                256,
+                int(settings.llm_max_completion_tokens or 0),
+            ),
         )
         answer = _clean_visitor_answer(raw_answer)
         if not answer:
@@ -2235,14 +2194,16 @@ def _image_system_prompt() -> str:
     )
 
 
-def _image_user_prompt(request: ChatRequest) -> str:
+def _image_user_prompt(
+    request: ChatRequest,
+    persona: dict | None = None,
+) -> str:
     parts = [
         f"用户问题：{request.question}",
         "请基于用户上传图片回答，并说明这是多模态辅助识别结果。",
     ]
-    guide_mode_prompt = _guide_mode_prompt(_guide_mode_from_request(request))
-    if guide_mode_prompt:
-        parts.append(guide_mode_prompt.strip())
+    if persona:
+        parts.append(persona_prompt(persona).strip())
     route_summary = _image_route_context_summary(request)
     if route_summary:
         parts.append(route_summary)
@@ -2313,7 +2274,7 @@ def _answer_text(
     web_supplement_required: bool,
     web_supplement_status: str,
     route_focus_instruction: str = "",
-    guide_mode: dict | None = None,
+    persona: dict | None = None,
 ) -> tuple[str, str, bool]:
     if settings.llm_mode == "mock":
         return _fallback_answer(
@@ -2374,10 +2335,13 @@ def _answer_text(
                 web_supplement_required,
                 web_supplement_status,
                 route_focus_instruction,
-                guide_mode,
+                persona,
             ),
             temperature=_temperature_for_style(settings, answer_style),
-            max_completion_tokens=_max_completion_tokens_for_guide_mode(settings, guide_mode),
+            max_completion_tokens=max(
+                256,
+                int(settings.llm_max_completion_tokens or 0),
+            ),
         )
         cleaned_answer = _stabilize_vague_recommendation_answer(
             _stabilize_entity_name(
@@ -2414,7 +2378,7 @@ def _answer_text_chunks(
     web_supplement_status: str,
     stream_state: dict,
     route_focus_instruction: str = "",
-    guide_mode: dict | None = None,
+    persona: dict | None = None,
 ):
     if settings.llm_mode == "mock":
         yield from _chunk_text(
@@ -2495,10 +2459,13 @@ def _answer_text_chunks(
                 web_supplement_required,
                 web_supplement_status,
                 route_focus_instruction,
-                guide_mode,
+                persona,
             ),
             temperature=_temperature_for_style(settings, answer_style),
-            max_completion_tokens=_max_completion_tokens_for_guide_mode(settings, guide_mode),
+            max_completion_tokens=max(
+                256,
+                int(settings.llm_max_completion_tokens or 0),
+            ),
         ):
             has_chunk = True
             yield chunk
@@ -3175,14 +3142,14 @@ def _user_prompt(
     web_supplement_required: bool,
     web_supplement_status: str,
     route_focus_instruction: str = "",
-    guide_mode: dict | None = None,
+    persona: dict | None = None,
 ) -> str:
     return (
         f"【游客问题】{question}\n\n"
         f"【问题分类】\n{json.dumps(classification, ensure_ascii=False)}\n\n"
         f"【游客情绪】\n{_emotion_text(classification)}\n\n"
         f"{route_focus_instruction}"
-        f"{_guide_mode_prompt(guide_mode)}"
+        f"{persona_prompt(persona)}"
         f"【事实证据】\n{_evidence_text(contexts, classification)}\n\n"
         f"{_entity_name_instruction(classification)}"
         f"{_vague_recommendation_instruction(question, contexts, classification)}"
@@ -3194,7 +3161,7 @@ def _user_prompt(
         "【冲突处理】\n"
         "如果不同来源冲突，数据库证据优先；同时说明其他来源存在差异，提醒游客以官方公告或现场说明为准。\n\n"
         f"【联网补充】\n{_web_supplement_text(web_supplement_required, web_supplement_status)}\n\n"
-        f"{_guide_mode_output_rule(guide_mode)}"
+        "请输出一段直接回答，2 到 4 句即可：先回应游客，再讲重点，再给一个现场建议。"
         "如果是服务建议问题，可以结合证据给出温和、务实的游览节奏建议。"
         "如果游客问“哪里比较出片/建筑感强/适合老人慢慢逛”等模糊推荐，可以点名 2 到 3 个景点并说明理由，但不要生成路线。"
         "如果游客问事实数值，先直接给数值，再补一句现场观看建议。"

@@ -20,7 +20,7 @@ export interface ChatBoxProps {
   error?: string;
   enableSpeechInput?: boolean;
   assistant?: GuideAssistantIdentity;
-  guideModeControl?: ReactNode;
+  headerControl?: ReactNode;
   onSend: (question: string) => void;
   onSendVoice?: (voice: GuideVoiceMessage) => void;
   onSendImage?: (question: string, image: GuideImageAttachment) => void;
@@ -53,7 +53,7 @@ export default function ChatBox({
   error,
   enableSpeechInput = false,
   assistant = defaultAssistant,
-  guideModeControl,
+  headerControl,
   onSend,
   onSendVoice,
   onSendImage,
@@ -170,7 +170,7 @@ export default function ChatBox({
           <figure className="avatar">
             <img src={assistant.avatarSrc} alt={assistant.avatarAlt} data-testid="guide-chat-avatar" />
           </figure>
-          {guideModeControl ? <div className="guide-aichat__mode-slot">{guideModeControl}</div> : null}
+          {headerControl ? <div className="guide-aichat__header-slot">{headerControl}</div> : null}
         </div>
 
         <div className="messages">

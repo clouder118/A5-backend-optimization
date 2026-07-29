@@ -413,94 +413,7 @@ def test_llm_synthesis_prompt_separates_evidence_and_source_rules(tmp_path, monk
     assert "高度：88米" in captured["user_prompt"]
 
 
-def test_chat_guide_mode_reaches_prompt_and_splits_answer_cache(tmp_path, monkeypatch):
-    captured_prompts = []
-    captured_max_tokens = []
-
-    def fake_chat_completion(
-        self,
-        model,
-        system_prompt,
-        user_prompt,
-        temperature=None,
-        max_completion_tokens=None,
-    ):
-        if "问题分类器" in system_prompt:
-            return json.dumps(
-                {
-                    "intent": "scenic_fact",
-                    "entities": [
-                        {
-                            "entity_type": "spot",
-                            "entity_id": "spot_ling_shan_buddha",
-                            "name": "灵山大佛",
-                            "matched_text": "灵山大佛",
-                        }
-                    ],
-                    "fact_keys": ["height_meters"],
-                    "tags": [],
-                    "emotional": False,
-                },
-                ensure_ascii=False,
-            )
-        captured_prompts.append(user_prompt)
-        captured_max_tokens.append(max_completion_tokens)
-        return f"模式化讲解回答 {len(captured_prompts)}"
-
-    monkeypatch.setattr(
-        "app.services.chat.MimoClient.chat_completion",
-        fake_chat_completion,
-    )
-    db_path = tmp_path / "app.db"
-    app = create_app(
-        Settings(
-            database_url=f"sqlite:///{db_path}",
-            source_package_path=str(SOURCE_PACKAGE_PATH),
-            llm_mode="openai_compatible",
-            llm_api_key="fake-key",
-            tts_mode="disabled",
-        )
-    )
-
-    payload = {
-        "question": "灵山大佛多高？",
-        "profile": {
-            "guide_mode": {
-                "style": "children",
-                "duration": "half_minute",
-            }
-        },
-    }
-    with TestClient(app) as client:
-        first = client.post("/api/chat", json=payload)
-        second = client.post(
-            "/api/chat",
-            json={
-                **payload,
-                "profile": {
-                    "guide_mode": {
-                        "style": "senior",
-                        "duration": "two_minutes",
-                    }
-                },
-            },
-        )
-
-    assert first.status_code == 200
-    assert second.status_code == 200
-    assert len(captured_prompts) == 2
-    assert "儿童版" in captured_prompts[0]
-    assert "约半分钟" in captured_prompts[0]
-    assert "表情符号" in captured_prompts[0]
-    assert "😊" in captured_prompts[0]
-    assert "长者版" in captured_prompts[1]
-    assert "约两分钟" in captured_prompts[1]
-    assert "堆表情" not in captured_prompts[1]
-    assert captured_max_tokens[0] >= 520
-    assert captured_max_tokens[1] >= 1200
-
-
-def test_chat_guide_mode_removes_stage_direction_parentheses(tmp_path, monkeypatch):
+def test_chat_removes_stage_direction_parentheses(tmp_path, monkeypatch):
     captured_prompts = []
 
     def fake_chat_completion(
@@ -534,7 +447,6 @@ def test_chat_guide_mode_removes_stage_direction_parentheses(tmp_path, monkeypat
             "/api/chat",
             json={
                 "question": "讲解香月花街。",
-                "profile": {"guide_mode": {"style": "children", "duration": "half_minute"}},
             },
         )
 
@@ -543,8 +455,6 @@ def test_chat_guide_mode_removes_stage_direction_parentheses(tmp_path, monkeypat
     assert "走到你身边" not in body["answer"]
     assert "语气轻快" not in body["answer"]
     assert body["answer"].startswith("欢迎来到香月花街")
-    assert "不要写括号里的动作" in captured_prompts[-1]
-    assert "表情说明" in captured_prompts[-1]
 
 
 def test_mixed_emotional_fact_prompt_keeps_emotion_separate_from_facts(tmp_path, monkeypatch):

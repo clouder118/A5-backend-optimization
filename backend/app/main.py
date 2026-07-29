@@ -13,6 +13,7 @@ from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
 from app.api.community import router as community_router
 from app.api.digital_human_avatars import router as digital_human_avatars_router
+from app.api.digital_human_persona import router as digital_human_persona_router
 from app.api.feedback import router as feedback_router
 from app.api.health import router as health_router
 from app.api.knowledge import router as knowledge_router
@@ -91,6 +92,7 @@ def create_app(app_settings: Settings | None = None) -> FastAPI:
     app.include_router(feedback_router)
     app.include_router(community_router)
     app.include_router(digital_human_avatars_router)
+    app.include_router(digital_human_persona_router)
     app.include_router(admin_router)
     app.include_router(avatar_assets_router)
     app.include_router(avatar_runtime_router)

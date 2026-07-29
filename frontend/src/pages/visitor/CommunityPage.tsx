@@ -213,7 +213,13 @@ export default function CommunityPage() {
               分享游览见闻，也看看其他游客留下的真实体验。
             </Typography.Paragraph>
           </div>
-          <Button icon={<ReloadOutlined />} onClick={loadPosts} loading={loading}>
+          <Button
+            type="primary"
+            className={styles.refreshButton}
+            icon={<ReloadOutlined />}
+            onClick={loadPosts}
+            loading={loading}
+          >
             刷新
           </Button>
         </header>

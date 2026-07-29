@@ -25,7 +25,8 @@
     "verify:avatar151-motions": "node scripts/verify-avatar151-motions.mjs",
     "verify:avatar-runtime": "node scripts/verify-avatar-runtime-config.mjs",
     "verify:source-provenance": "node scripts/verify-source-provenance.mjs",
-    "verify:welcome-audio": "node scripts/verify-welcome-audio.mjs"
+    "verify:welcome-audio": "node scripts/verify-welcome-audio.mjs",
+    "verify:digital-human-persona": "node scripts/verify-digital-human-persona.mjs"
   },
   "dependencies": {
     "@ant-design/charts": "^2.6.7",

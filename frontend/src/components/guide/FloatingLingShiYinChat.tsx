@@ -30,7 +30,6 @@ import {
   saveGuideChatSession,
 } from '../../utils/visitorSessionState';
 import ChatBox from './ChatBox';
-import { DEFAULT_GUIDE_MODE } from './GuideModeSelector';
 import { WELCOME_MESSAGE_AUDIO_URL, WELCOME_MESSAGE_TEXT } from './welcomeMessage';
 
 const INITIAL_MESSAGE_DELAY_MS = 100;
@@ -195,7 +194,6 @@ export default function FloatingLingShiYinChat() {
         preference: preferenceText,
         routePreference: routeAwarePreference,
         routeContext: activeRouteContext,
-        guideMode: DEFAULT_GUIDE_MODE,
         spotId: activeRouteContext ? undefined : spotId,
         currentSpotName: activeRouteContext?.currentSpot?.name ?? spotName,
         image: userMessagePatch?.image,

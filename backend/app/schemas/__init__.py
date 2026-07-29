@@ -343,6 +343,89 @@ class ChatRequest(BaseModel):
     image: ChatImageAttachment | None = None
 
 
+DigitalHumanIdentity = Literal[
+    "ancient_scholar",
+    "republican_reporter",
+    "future_explorer",
+    "scenic_resident",
+    "professional_guide",
+    "local_friend",
+    "culture_interpreter",
+    "food_expert",
+    "photography_guide",
+    "travel_butler",
+    "unspecified",
+]
+DigitalHumanAgeMode = Literal["group", "exact"]
+DigitalHumanAgeGroup = Literal["teen", "young", "middle", "senior", "unspecified"]
+DigitalHumanGender = Literal["male", "female", "neutral", "unspecified"]
+DigitalHumanPersonality = Literal[
+    "gentle",
+    "cheerful",
+    "professional",
+    "humorous",
+    "talkative",
+    "considerate",
+    "curious",
+    "calm",
+]
+DigitalHumanExpressionStyle = Literal[
+    "direct",
+    "detailed",
+    "storytelling",
+    "casual",
+    "formal",
+    "poetic",
+    "interactive",
+    "unspecified",
+]
+
+
+class DigitalHumanPersonaConfig(BaseModel):
+    identity: DigitalHumanIdentity = "professional_guide"
+    age_mode: DigitalHumanAgeMode = "group"
+    age_group: DigitalHumanAgeGroup = "young"
+    exact_age: int | None = Field(default=None, ge=1, le=120)
+    gender: DigitalHumanGender = "unspecified"
+    personalities: list[DigitalHumanPersonality] = ["gentle"]
+    expression_style: DigitalHumanExpressionStyle = "unspecified"
+    creative_prompt: str = Field(default="", max_length=1000)
+
+    @model_validator(mode="after")
+    def validate_persona(self):
+        self.personalities = list(dict.fromkeys(self.personalities))
+        if not 1 <= len(self.personalities) <= 3:
+            raise ValueError("personalities must contain between 1 and 3 unique values")
+        if self.age_mode == "exact":
+            if self.exact_age is None:
+                raise ValueError("exact_age is required when age_mode is exact")
+            self.age_group = _digital_human_age_group(self.exact_age)
+        else:
+            self.exact_age = None
+        self.creative_prompt = self.creative_prompt.strip()
+        return self
+
+
+class DigitalHumanPersonaResponse(DigitalHumanPersonaConfig):
+    is_customized: bool
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class DigitalHumanPersonaTextResponse(BaseModel):
+    text: str
+
+
+def _digital_human_age_group(age: int) -> DigitalHumanAgeGroup:
+    if age <= 17:
+        return "teen"
+    if age <= 35:
+        return "young"
+    if age <= 59:
+        return "middle"
+    return "senior"
+
+
 class KnowledgeSource(BaseModel):
     title: str
     spot_name: str | None = None

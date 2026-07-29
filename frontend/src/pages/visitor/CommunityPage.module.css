@@ -22,6 +22,41 @@
   border-bottom: 1px solid #dfdbd2;
 }
 
+.refreshButton {
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0.5rem 1rem !important;
+  overflow: hidden;
+  color: #141413 !important;
+  font-family: "RouteCyberRajdhani", "Rajdhani", "Microsoft YaHei", sans-serif !important;
+  font-size: 1rem !important;
+  font-weight: 400 !important;
+  line-height: normal !important;
+  font-synthesis: none;
+  background: #e8ded0 !important;
+  border: 1px solid #8f8072 !important;
+  border-radius: 0 !important;
+  border-top-right-radius: 0.8rem !important;
+  border-bottom-right-radius: 0.8rem !important;
+  box-shadow: none !important;
+  corner-shape: superellipse(0);
+}
+
+.refreshButton:hover,
+.refreshButton:focus-visible {
+  color: #141413 !important;
+  background: rgba(20, 20, 19, 0.05) !important;
+  border-color: rgba(20, 20, 19, 0.14) !important;
+  box-shadow: none !important;
+}
+
+.refreshButton:disabled {
+  color: #b0aea5 !important;
+  background: rgba(20, 20, 19, 0.04) !important;
+  border-color: rgba(20, 20, 19, 0.06) !important;
+  opacity: 0.48;
+}
+
 .title {
   margin: 0 0 6px !important;
   color: #24231f !important;
