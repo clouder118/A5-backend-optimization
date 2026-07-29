@@ -3850,6 +3850,7 @@ body::selection {
 }
 
 .spot-reel-page {
+  position: relative;
   min-height: 100dvh;
   padding-top: var(--visitor-fixed-header-offset);
   background: #080908;
